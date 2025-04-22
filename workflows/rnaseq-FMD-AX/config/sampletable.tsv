@@ -1,0 +1,29 @@
+samplename	group	antibody	FLAG	fraction	layout	orig_filename	orig_filename_R2
+WT_Untagged_Hfq_1	WT_Untagged_Hfq				PE	../../demuxed-data/fastq190510/WT_Untagged_Hfq_1_1.fastq.gz	../../demuxed-data/fastq190510/WT_Untagged_Hfq_1_2.fastq.gz
+WT_Untagged_Hfq_2	WT_Untagged_Hfq				PE	../../demuxed-data/fastq190510/WT_Untagged_Hfq_2_1.fastq.gz	../../demuxed-data/fastq190510/WT_Untagged_Hfq_2_2.fastq.gz
+Hfq-FLAG_1	Hfq-FLAG				PE	../../demuxed-data/fastq190510/Hfq-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq-FLAG_1_2.fastq.gz
+Hfq-FLAG_2	Hfq-FLAG				PE	../../demuxed-data/fastq190510/Hfq-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq-FLAG_2_2.fastq.gz
+Hfq_K31A-FLAG_1	Hfq_K31A-FLAG				PE	../../demuxed-data/fastq190510/Hfq_K31A-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_K31A-FLAG_1_2.fastq.gz
+Hfq_K31A-FLAG_2	Hfq_K31A-FLAG				PE	../../demuxed-data/fastq190510/Hfq_K31A-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_K31A-FLAG_2_2.fastq.gz
+Hfq_D9A-FLAG_1	Hfq_D9A-FLAG				PE	../../demuxed-data/fastq190510/Hfq_D9A-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_D9A-FLAG_1_2.fastq.gz
+Hfq_D9A-FLAG_2	Hfq_D9A-FLAG				PE	../../demuxed-data/fastq190510/Hfq_D9A-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_D9A-FLAG_2_2.fastq.gz
+Hfq_R16A-FLAG_1	Hfq_R16A-FLAG				PE	../../demuxed-data/fastq190510/Hfq_R16A-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_R16A-FLAG_1_2.fastq.gz
+Hfq_R16A-FLAG_2	Hfq_R16A-FLAG				PE	../../demuxed-data/fastq190510/Hfq_R16A-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_R16A-FLAG_2_2.fastq.gz
+Hfq_Y25D-FLAG_1	Hfq_Y25D-FLAG				PE	../../demuxed-data/fastq190510/Hfq_Y25D-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_Y25D-FLAG_1_2.fastq.gz
+Hfq_Y25D-FLAG_2	Hfq_Y25D-FLAG				PE	../../demuxed-data/fastq190510/Hfq_Y25D-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_Y25D-FLAG_2_2.fastq.gz
+Hfq_totalRNA_noIP_1	Hfq_totalRNA_noIP	no IP	no	Total RNA	PE	../../demuxed-data/fastq231218_2/Hfq_totalRNA_noIP_1_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq_totalRNA_noIP_1_2.fastq.gz
+R16A_totalRNA_noIP_1	R16A_totalRNA_noIP	no IP	no	Total RNA	PE	../../demuxed-data/fastq231218_2/R16A_totalRNA_noIP_1_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_totalRNA_noIP_1_2.fastq.gz
+Hfq-FLAG_totalRNA_noIP_1	Hfq-FLAG_totalRNA_noIP	no IP	yes	Total RNA	PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_totalRNA_noIP_1_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_totalRNA_noIP_1_2.fastq.gz
+R16A-FLAG_totalRNA_noIP_1	R16A-FLAG_totalRNA_noIP	no IP	yes	Total RNA	PE	../../demuxed-data/fastq231218_2/R16A-FLAG_totalRNA_noIP_1_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_totalRNA_noIP_1_2.fastq.gz
+Hfq_IPRNA_antiHfq_1	Hfq_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA	PE	../../demuxed-data/fastq231218_2/Hfq_IPRNA_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq_IPRNA_antiHfq_1_2.fastq.gz
+R16A_IPRNA_antiHfq_1	R16A_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA	PE	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_1_2.fastq.gz
+Hfq-FLAG_IPRNA_antiHfq_1	Hfq-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA	PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_1_2.fastq.gz
+R16A-FLAG_IPRNA_antiHfq	R16A-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA	PE	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHfq_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHfq_2.fastq.gz
+Hfq_totalRNA_noIP_2	Hfq_totalRNA_noIP	no IP	no	Total RNA	PE	../../demuxed-data/fastq231218_2/Hfq_totalRNA_noIP_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq_totalRNA_noIP_2_2.fastq.gz
+R16A_totalRNA_noIP_2	R16A_totalRNA_noIP	no IP	no	Total RNA	PE	../../demuxed-data/fastq231218_2/R16A_totalRNA_noIP_2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_totalRNA_noIP_2_2.fastq.gz
+Hfq-FLAG_totalRNA_noIP_2	Hfq-FLAG_totalRNA_noIP	no IP	yes	Total RNA	PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_totalRNA_noIP_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_totalRNA_noIP_2_2.fastq.gz
+R16A-FLAG_totalRNA_noIP_2	R16A-FLAG_totalRNA_noIP	no IP	yes	Total RNA	PE	../../demuxed-data/fastq231218_2/R16A-FLAG_totalRNA_noIP_2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_totalRNA_noIP_2_2.fastq.gz
+Hfq_IPRNA_antiHfq_2	Hfq_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA	PE	../../demuxed-data/fastq231218_2/Hfq_IPRNA_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq_IPRNA_antiHfq_2_2.fastq.gz
+R16A_IPRNA_antiHfq_2	R16A_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA	PE	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_2_2.fastq.gz
+Hfq-FLAG_IPRNA_antiHfq_2	Hfq-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA	PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_2_2.fastq.gz
+R16A-FLAG_IPRNA_antiHf2	R16A-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA	PE	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHf2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHf2_2.fastq.gz
