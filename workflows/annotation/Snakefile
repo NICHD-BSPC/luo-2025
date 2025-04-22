@@ -1,0 +1,449 @@
+import yaml
+import pandas as pd
+import pybedtools
+import csv
+import numpy as np
+import gffutils
+import re
+
+configfn = 'config/config.yaml'
+config = yaml.safe_load(open(configfn))
+
+# ----------------------------------------------------------------------------
+# RULES
+# ----------------------------------------------------------------------------
+
+
+final_targets = [
+    'data/NC_000913-3_gene_tRNA.patch3.gff',
+    # all features are "exons" to be quantified by featurecounts
+    'data/NC_000913-3_gene_tRNA.patch4.gff',
+]
+
+rule targets:
+    """
+    Final targets to create
+    """
+    input:
+        final_targets
+
+
+def parse_descr(dfcol, field):
+    """
+    dfcol: description column to parse in GFF
+    field: name of field to extract in description
+    format example: gene_id "EG11277"; gene_name "thrL";
+    """
+    dfcol = dfcol.str.split(field + ' "', expand=True)
+    dfcol = dfcol[1].str.split('";', expand=True)[0]
+    return(dfcol)
+
+def my_csv(df, outfn):
+    df.to_csv(outfn,
+        sep='\t',
+        header = False,
+        index=False,
+        quoting=csv.QUOTE_NONE)
+
+
+def check_coord_change(df, region, logfn=False):
+    """
+    check if coordinate changed,
+    apply change and modifiy 5UTR or 3UTR and TU
+    df: gff df with old and new coordinates
+    region: start or end
+    logfn: file to save the changes
+    """
+    col1 = region + '_p0'
+    col2 = region + '_p1'
+    opposite = 'end' if region == 'start' else 'start'
+    newcol = region + '_new'
+    coord_change_idx = (df[col1] != df[col2]) & \
+        ~df[col1].isna() & \
+        ~df[col2].isna()
+    # keep a record of coordinate changes
+    if logfn:
+        my_csv(df.loc[coord_change_idx,:], logfn)
+    # propagate eventual coordinate changes
+    df[newcol] = np.where(coord_change_idx,
+        df[col2],
+        df[col1])
+    # update corresponding adjacent feature
+    for idx in df.index[coord_change_idx]:
+        # original feature            ---------j
+        # adjacent feature                      j+1---------
+        # changed feature             -------------i
+        # new adjacent feature                      i+1-----
+        orig_coord = df.loc[idx, col1] +1 if region == 'end' else df.loc[idx, col1] -1
+        updt_coord = df.loc[idx, col2] +1 if region == 'end' else df.loc[idx, col2] -1
+        strand = df.loc[idx, 'strand_p0']
+        # affected adjacent UTR and TU features, on same strand (don't want to change mRNA, tRNA, rRNA, sRNA,
+        # ncRNA; IGR and TU will be dealt with later)
+        keep = ['5UTR', '3UTR', 'TU']
+        aff_idx = (df[opposite+'_p0'] == orig_coord) & (df['type'].isin(keep)) & (df['strand_p0'] == strand)
+        if sum(aff_idx > 0):
+            df.loc[aff_idx, opposite+'_new'] = updt_coord
+    return(df)
+
+
+def add_new_genes(df, logfn=False):
+    """
+    check for new genes (that are not in _p0)
+    and add them in 'start_new', 'end_new', 'strand_new'
+    """
+    new_gene_idx = df['start_p0'].isna() & \
+        ~df['start_p1'].isna()
+    # keep a record of coordinate changes
+    if logfn:
+        my_csv(df.loc[new_gene_idx,:], logfn)
+    # propagate eventual coordinate changes
+    for w in ['start', 'end', 'strand']:
+        df[w+'_new'] = np.where(new_gene_idx, df[w+'_p1'], df[w+'_new'])
+    # add the type
+    df['type'] = np.where(new_gene_idx, 'mRNA', df['type'])
+    df['type'] = np.where(new_gene_idx & df['gene_name'].str.contains('.IGR$'), 'IGR', df['type'])
+    df['type'] = np.where(new_gene_idx & df['gene_name'].str.contains('.5UTR$'), '5UTR', df['type'])
+    df['type'] = np.where(new_gene_idx & df['gene_name'].str.contains('.3UTR$'), '3UTR', df['type'])
+    return(df)
+
+
+def update_antisense(df, logfn=False):
+    """
+    takes all mRNAs and TUs
+    and makes an AS with same coordinates
+    """
+    # if existing AS, if match previous mRNA coordinate and it changed, change it
+    # if existing AS and previous coord did not match, that was experimentally found, do not change it
+    as_idx = df['type'] == 'AS'
+    for idx in df.index[as_idx]:
+        # start and end coords of the AS
+        start_i, end_i = df.loc[idx, ['start_p0', 'end_p0']]
+        # are there sense that match the criteria?
+        #   1. coordinates match AS - sense
+        #   2. opposite strand
+        #   3. sense coords start or end have changed
+        #   4. found in p1
+        aff_idx = (df['start_p0'] == start_i) & (df['end_p0'] == end_i) & \
+            (df['strand_p0'] != df.loc[idx, 'strand_p0']) & \
+            ( (df['start_p0'] != df['start_p1']) | (df['end_p0'] != df['end_p1'])) & \
+            (~df['start_p1'].isna())
+        if sum(aff_idx) > 0:
+            df.loc[idx, ['start_new', 'end_new']] = df.loc[df.index[aff_idx][0], ['start_new', 'end_new']]
+
+    # if new gene: make AS with same coords;
+    # all entries in p1 need to be considered as gene
+    new_gene_idx = df['start_p0'].isna() & \
+        ~df['start_p1'].isna()
+    new_as_df = df.loc[new_gene_idx,:]
+    new_as_df['type'] = 'AS'
+    new_as_df['feature'] = 'AS'
+    new_as_df['gene_id'] = new_as_df['gene_id'] + '.AS'
+    new_as_df['gene_name'] = new_as_df['gene_name'] + '.AS'
+    new_as_df['strand_new'] = np.where(new_as_df['strand_new'] == '+', '-', '+')
+    df = pd.concat((df, new_as_df), ignore_index=True)
+    return(df)
+
+
+def make_gene_dict(df, strand, where, fai):
+    # subset to strand
+    dfsub = df.loc[ df['strand_new'] == strand, :]
+    # convert the gene names with .5UTR,... to their CDS
+    # by deleting anything after the last '.'
+    dfsub['short_name'] = dfsub['gene_name'].str.replace(r'\.\w+$', '')
+    gene_dict = dict(zip(dfsub[where].astype(str), dfsub['short_name']))
+    # manually add the '0' entry with last gene on chromosome, because E. coli chr is circular
+    # and last position with first gene
+    gene_dict['0'] = dfsub.sort_values(by=['start_new'])['short_name'].iloc[-1]
+    gene_dict[str(fai['chr'][1])] = dfsub.sort_values(by=['start_new'])['short_name'].iloc[0]
+    return(gene_dict)
+
+
+def make_complement(df, gene_dict, strd, faifn, bed_cols):
+    """
+    make complement of intervals
+    to make the IGR intervals
+    add the name based on strand-specific upstream and downstream genes
+    df: dataframe, intervals for mRNAs, UTR, TU, nc_RNAs, tRNAs, rRNAs, and AS
+    strd: str, strand + or -
+    faifn: pybedtools file name for genome index
+    bed_cols: name of columns to format df in BED
+    """
+    # pybedtools object for mRNA, UTR, AS, tRNAs,...
+    pbt_RNA = pybedtools.BedTool.from_dataframe(df[bed_cols]).sort()
+    comp_df = pbt_RNA.filter(lambda a: a.strand == strd).complement(g=faifn).to_dataframe()
+    comp_df.columns = ['chrom', 'start_new', 'end_new']
+    comp_df[['type', 'score', 'strand_new']] = ['IGR', '.', strd]
+    # the coordinates were GFF, 1-based, shift by 1 the extremities, and remove empty IGRs
+    comp_df['start_new'] = comp_df['start_new'] + 1
+    comp_df['end_new'] = comp_df['end_new'] - 1
+    comp_df = comp_df.loc[ comp_df['start_new'] < comp_df['end_new'],:]
+    # make name, up_gene refers to upstream on + strand, downstream on - strand
+    if strd == '+':
+        comp_df['up_gene'] = [gene_dict[strd]['up'][str(x)] for x in (comp_df['start_new'] - 1)]
+        comp_df['dn_gene'] = [gene_dict[strd]['dn'][str(x)] for x in (comp_df['end_new'] + 1)]
+    elif strd == '-':
+        # if (-) strand, need to use the end_new for upstream
+        comp_df['up_gene'] = [gene_dict[strd]['up'][str(x)] for x in (comp_df['end_new'] + 1)]
+        comp_df['dn_gene'] = [gene_dict[strd]['dn'][str(x)] for x in (comp_df['start_new'] - 1)]
+    comp_df['gene_name'] = comp_df['up_gene'] + '.' + comp_df['dn_gene'] + '.IGR'
+    return(comp_df)
+
+
+def fill_in_igr(df, logfn=False):
+    # recalculate the IGR
+    bed_cols = ['chrom', 'start_new', 'end_new', 'gene_name', 'score', 'strand_new']
+    df['chrom'] = 'chr'
+    df['score'] = '.'
+    # need integer coordinates for bedtools
+    df['start_new'] = df['start_new'].astype(int)
+    df['end_new'] = df['end_new'].astype(int)
+    # store the existing IGR, to compare later, keep non-IGR or IGR if also has 'exon' feature
+    old_igr = df.loc[ df['type'].isin(['IGR']), bed_cols]
+    my_csv(old_igr, 'data/original_IGR.tsv')
+    df = df.loc[ (~df['type'].isin(['IGR'])) | (df['feature'] == 'exon'),:]
+    # bedtools complement -i <BED/GFF/VCF> -g <GENOME> to get any region NOT covered by a feature
+    # - determine the genome
+    fai = {'chr': (0, int(max(df['end_p0'])))}
+    faifn = pybedtools.helpers.chromsizes_to_file(fai)
+    # - make dict of start-or-end_position: gene_name
+    # ------------up-->IGR>-dn-------------  (+)
+    # ----------->end>----->start>---------  (+)
+    # ------------dn--<IGR<-up-------------  (-)
+    # -----------<end<-----<start<---------  (-)
+    gene_dict = {'+': {'up': make_gene_dict(df, '+', 'end_new', fai),
+                       'dn': make_gene_dict(df, '+', 'start_new', fai)
+                       },
+                 '-': {'up': make_gene_dict(df, '-', 'start_new', fai),
+                       'dn': make_gene_dict(df, '-', 'end_new', fai)
+                       },
+                 }
+    # - bedtools complement on each strand
+    pos_igr = make_complement(df, gene_dict, '+', faifn, bed_cols)
+    neg_igr = make_complement(df, gene_dict, '-', faifn, bed_cols)
+    # - add to the gff df
+    df = df.append(pos_igr).append(neg_igr)
+    df = df.sort_values(by=['start_new', 'type'])
+    return(df)
+
+def update_meta(df, sourcename = 'Melamed_2020_PMID31761494'):
+    # update description field
+    df['gene_id'] = np.where(df['gene_id'].isna(), df['gene_name'], df['gene_id'])
+    df['source'] = np.where(df['source'].isna(), sourcename, df['source'])
+    df['description'] =  'gene_id "' + df['gene_id'] + \
+                                  '"; gene_name "' + df['gene_name'] + \
+                                  '"; type "' + df['type'] + '";'
+    # feature column with 'exon' for RNAs to be quantified in DESeq, or type for others (UTRs,...)
+    df['feature'] = np.where(df['feature'].isna(), df['type'], df['feature'])
+    return(df)
+
+rule patch1:
+    """
+    take the initial annotation with UTR info
+    check for coordinate changes with updated GFF patch1
+    add any new CDS from patch1
+    """
+    input:
+        p0 = config['patch0']['file'],
+        p1 = config['patch1']['file']
+    output:
+        gff = 'data/NC_000913-3_gene_tRNA.patch1.gff',
+    log:
+        'logs/patch1.log'
+    run:
+        # read in files: original GFF
+        gff = pd.read_excel(input.p0, header=None)
+        gff.columns = ['start', 'end', 'strand', 'type', 'gene_name']
+        # correct erroneous AS: when start is > end. About 100 1 or 2 bp intervals
+        # 122857.0        122856.0        +       AS      tp2.AS
+        gff['end'] = np.where(gff['start'] > gff['end'], gff['start'], gff['end'])
+
+        # read in files: patch 1
+        p1 = pd.read_table(input.p1, sep='\t', header=None)
+        p1.columns = ['chrom', 'source', 'feature', 'start', 'end', 'score',
+                      'strand', 'na', 'description']
+        # parse p1['description'] to get gene name
+        p1['gene_name'] = parse_descr(p1['description'], 'gene_name')
+        p1['gene_id'] = parse_descr(p1['description'], 'gene_id')
+        # prep p1 to change gene names when 3'UTR, IG, 5'UTR and 3'.
+        # Note that they still should counted as exons, want to quantify the tRNA precursors 
+        repl_dict = {"_5'UTR": '.5UTR',
+                     "_3'UTR": '.3UTR',
+                     "_IG": '.IGR',
+                     "_3'": '.3UTR'}
+        for substr in repl_dict.keys():
+            p1['gene_name'] = p1['gene_name'].str.replace(substr, repl_dict[substr])
+            p1['gene_id'] = p1['gene_id'].str.replace(substr, repl_dict[substr])
+        p1['gene_name'] = np.where(p1['gene_name'].str.contains('.IGR'),
+            p1['gene_name'].str.replace('_', '.'),
+            p1['gene_name'])
+        p1['gene_id'] = np.where(p1['gene_id'].str.contains('.IGR'),
+            p1['gene_id'].str.replace('_', '.'),
+            p1['gene_id'])
+
+        # merge original and patch1 on gene_name
+        gff_upd = gff.merge(p1,
+            how='outer',
+            on='gene_name',
+            suffixes=['_p0', '_p1'],
+            sort=False)
+        gff_upd['strand_new'] = gff_upd['strand_p0']
+
+        # are there coordinate changes in the mRNAs?
+        # in column 'start_new' for start
+        gff_upd = check_coord_change(gff_upd, 'start')
+        # in column 'end_new' for end
+        gff_upd = check_coord_change(gff_upd, 'end')
+        # updating adjacent features might have made them negative size, remove them
+        gff_upd = gff_upd.loc[ (gff_upd['start_new'] < gff_upd['end_new']) | gff_upd['start_new'].isna(), :]
+
+        # are there new genes?
+        gff_upd = add_new_genes(gff_upd)
+
+        # add/update antisense genes
+        gff_upd = update_antisense(gff_upd)
+
+        # rebuild the IGRs
+        gff_upd = fill_in_igr(gff_upd)
+
+        # update description field
+        gff_upd = update_meta(gff_upd)
+
+        # save GFF
+        gff_cols = ['chrom', 'source', 'feature', 'start_new', 'end_new', 'score',
+                      'strand_new', 'score', 'description']
+        gff_upd = gff_upd.drop_duplicates(subset = gff_cols)
+        gff_upd = gff_upd.sort_values(by=['start_new', 'end_new', 'type'])
+        my_csv(gff_upd[gff_cols], output.gff)
+
+
+rule patch2:
+    """
+    take the patch1 GFF and add info from patch2 file
+    patch2 file contains list of sRNAs IDs
+    """
+    input:
+        p1 = 'data/NC_000913-3_gene_tRNA.patch1.gff',
+        p2 = config['patch2']['file']
+    output:
+        gff = 'data/NC_000913-3_gene_tRNA.patch2.gff',
+    log:
+        'logs/patch2.log'
+    run:
+        # read inputs
+        p1 = pd.read_table(input.p1, sep='\t', header=None)
+        p1.columns = ['chrom', 'source', 'feature', 'start', 'end', 'score',
+                      'strand_p0', 'na', 'description']
+        p1['gene_name'] = parse_descr(p1['description'], 'gene_name')
+        p1['gene_id'] = parse_descr(p1['description'], 'gene_id')
+        p1['type'] = parse_descr(p1['description'], 'type')
+        p2 = pd.read_excel(input.p2)
+        p2.columns = ['gene_name', 'RNA_name', 'alternate_name', 'start', 'end', 'size']
+        # remove trailing white space in p2
+        p2 = p2.replace(r"^ +| +$", r"", regex=True)
+        # set feature to exon to merge with p1
+        p2['feature'] = 'exon'
+        # fix gene names in p2 to match previous files
+        repl_dict = {"_3'": '.3UTR'}
+        for substr in repl_dict.keys():
+            p2['gene_name'] = p2['gene_name'].str.replace(substr, repl_dict[substr])
+
+        # merge (keep suffixes p0 and p1 to use the same functions)
+        gff_upd = p1.merge(p2,
+            how='outer',
+            on=['gene_name', 'feature'],
+            suffixes=['_p0', '_p1'],
+            sort=False)
+
+        # if gene names don't match, raise error so can fix them
+        # p2 is a list of sRNAs, should not have new gene
+        unmatched_idx = gff_upd['start_p0'].isna()
+        if sum(unmatched_idx) > 0:
+            raise ValueError('Unmatched rows:' +gff_upd.loc[unmatched_idx, :] )
+
+        # check changes and update accordingly, see rule patch1 for comments
+        gff_upd = check_coord_change(gff_upd, 'start')
+        gff_upd = check_coord_change(gff_upd, 'end')
+        gff_upd = gff_upd.loc[ (gff_upd['start_new'] < gff_upd['end_new']) | gff_upd['start_new'].isna(), :]
+        gff_upd['strand_new'] = gff_upd['strand_p0']
+        gff_upd = update_antisense(gff_upd)
+        gff_upd = fill_in_igr(gff_upd)
+        gff_upd = update_meta(gff_upd)
+
+        # set the type to sRNA in the description
+        p2_idx = ~gff_upd['start_p1'].isna()
+        gff_upd['description'] = np.where(p2_idx,
+                                          gff_upd['description'].str.replace(r'type "\w+";', 'type "sRNA";'),
+                                          gff_upd['description'])
+
+        # save GFF
+        gff_cols = ['chrom', 'source', 'feature', 'start_new', 'end_new', 'score',
+                      'strand_new', 'score', 'description']
+        gff_upd = gff_upd.drop_duplicates(subset = gff_cols)
+        gff_upd = gff_upd.sort_values(by=['start_new', 'end_new', 'type'])
+        my_csv(gff_upd[gff_cols], output.gff)
+
+
+def get_genedescr(gene_name_df, annot):
+    # parse the gene name in case there are more than 1 gene (i.e. IGRs have 2)
+    # and convert to the gene function description
+    gene_name_df = gene_name_df.str.split('.', expand=True)
+    for col_i in gene_name_df.columns:
+        gene_name_df[col_i] = [annot[x] if x in annot.keys() else np.nan for x in gene_name_df[col_i] ]
+    out = gene_name_df.apply(
+        lambda x: ':'.join(x.dropna().astype(str)),
+        axis=1
+        )
+    return(out)
+
+rule patch3:
+    """
+    take the patch2 GFF and add info from patch3 file
+    patch3 file contains the gene description / function
+    """
+    input:
+        p2 = 'data/NC_000913-3_gene_tRNA.patch2.gff',
+        p3 = config['patch3']['file']
+    output:
+        gff = 'data/NC_000913-3_gene_tRNA.patch3.gff',
+    log:
+        'logs/patch3.log'
+    run:
+        # read inputs
+        p2 = pd.read_table(input.p2, sep='\t', header=None)
+        gff_cols = ['chrom', 'source', 'feature', 'start', 'end', 'score',
+                      'strand_p0', 'na', 'description']
+        p2.columns = gff_cols
+        p2['gene_name'] = parse_descr(p2['description'], 'gene_name')
+        p3 = pd.read_table(input.p3, sep='\t')
+        p3 = dict(zip(p3['Gene Name'], p3['Product']))
+        # parse the gene_name (i.e. "thrL.yjtD.IGR" split on '.')
+        # to add the description
+        p2['gene_description'] = get_genedescr(p2['gene_name'], p3)
+        # update the description field with the gene description
+        p2['description'] = p2['description'] + ' gene_function "' + p2['gene_description'] + '";'
+        my_csv(p2[gff_cols], output.gff)
+
+
+rule patch4:
+    """
+    to be able to quantify every feature in featurcounts, make a version
+    of the GFF where IGR, AS, UTR are changed to exon
+    There are no overlapping features, but they are all adjacent
+    """
+    input:
+        p3 = 'data/NC_000913-3_gene_tRNA.patch3.gff',
+    output:
+        gff = 'data/NC_000913-3_gene_tRNA.patch4.gff',
+    log:
+        'logs/patch4.log'
+    run:
+        # read inputs
+        p3 = pd.read_table(input.p3, sep='\t', header=None)
+        gff_cols = ['chrom', 'source', 'feature', 'start', 'end', 'score',
+                      'strand', 'na', 'description']
+        p3.columns = gff_cols
+        p3['feature'] = 'exon'
+        my_csv(p3[gff_cols], output.gff)
+
+
+

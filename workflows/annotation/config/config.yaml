@@ -1,0 +1,24 @@
+# start from previous version of full annotation with 5UTR and 3UTR, from Melamed et al., https://doi.org/10.1016/j.molcel.2019.10.022
+patch0:
+  file: prepared-input/RNA_types.xlsx
+  description: 'annotation used in Melamed et al., 2020'
+
+# updated GFF
+patch1:
+  file: prepared-input/NC_000913-3_gene_tRNA.gff
+  description: 'updated annotation GFF as of 06/29/2023'
+
+# list of current sRNAs to be annotated as sRNAs
+patch2:
+  file: prepared-input/Ecoli-sRNAs_update_05.2022.xlsx
+  description: 'list of known sRNAs in E. coli as of 07/27/2023'
+
+# gene description
+patch3:
+  file: prepared-input/All-genes-of-E.-coli-K-12-substr.-MG1655_20230627.txt
+  description: 'Special Smart table from Ecocyc listing all genes and their description, as of 06/27/2023'
+
+# all features to exon
+patch4:
+  file: FALSE
+  description: 'all entries features should be exon so featurecounts can quantify in AS, IGR, UTR and gene'
