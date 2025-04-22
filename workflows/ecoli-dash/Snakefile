@@ -1,0 +1,360 @@
+import sys
+import os
+from textwrap import dedent
+import yaml
+import tempfile
+import pandas as pd
+import numpy as np
+import pybedtools
+from pybedtools import featurefuncs
+import csv
+from Bio import Seq
+from Bio import SeqIO
+from Bio.SeqUtils import GC
+from Bio.SeqUtils.MeltingTemp import Tm_NN
+import statistics
+import matplotlib.pyplot as plt
+import pyfaidx
+import primer3
+import itertools
+from Bio.Data.IUPACData import ambiguous_dna_values, ambiguous_dna_complement
+
+# load dash
+sys.path.append('..')
+from dash_canonical import dash
+from dash_canonical import CandidateFinder
+
+
+configfn = 'config/config.yaml'
+config = yaml.safe_load(open(configfn))
+
+gtf_colnames = ['chrom', 'source', 'feature', 'start', 'end',
+                'score', 'strand', 'na', 'name']
+
+bed_colnames = ['chrom', 'start', 'end', 'name', 'score', 'strand']
+
+wildcard_constraints:
+    # This prevents wildcards to be interpreted as regexes
+    ext = '|'.join(['fna', 'gtf'])
+
+# ----------------------------------------------------------------------------
+# RULES
+# ----------------------------------------------------------------------------
+
+rule targets:
+    """
+    Final targets to create
+    """
+    input:
+        # refs
+        expand('references_data/ref_{reference_name}.{ext}',
+               reference_name = config['reference_name'],
+               ext = ['fna', 'gtf']),
+        expand('references_data/rRNA_{reference_name}.bed',
+               reference_name = config['reference_name']),
+        expand('references_data/ref_{reference_name}.fna.fai',
+               reference_name = config['reference_name']),
+
+        # GC content
+        expand('data/QC/GCcontent_{reference_name}.tsv',
+               reference_name = config['reference_name']),
+
+        # DASH
+        expand('data/{reference_name}_{guidelen}/candidates_grnas.fa',
+               calc=['gc', 'tm'], reference_name = config['reference_name'], guidelen = config['guide_length']),
+        expand('data/{reference_name}_{guidelen}/candidates_oligos.csv',
+               calc=['gc', 'tm'], reference_name = config['reference_name'], guidelen = config['guide_length']),
+        expand('data/{reference_name}_{guidelen}/candidates_coverage.pdf',
+               calc=['gc', 'tm'], reference_name = config['reference_name'], guidelen = config['guide_length']),
+
+        # diagnostics
+        expand( 'data/QC/guide_{calc}_{reference_name}_{guidelen}.tsv',
+               calc=['gc', 'tm'], reference_name = config['reference_name'], guidelen = config['guide_length']),
+        expand('data/QC/guide_{calc}_summary_{reference_name}_{guidelen}.tsv',
+               calc=['gc', 'tm'], reference_name = config['reference_name'], guidelen = config['guide_length']),
+        expand( 'data/QC/guide_{calc}_{reference_name}_{guidelen}.pdf',
+               calc=['gc', 'tm'], reference_name = config['reference_name'], guidelen = config['guide_length']),
+
+
+
+def get_dl_ref_input(wildcards):
+    if wildcards.ext == 'fna':
+        return(config['reference_url']['genome'])
+    elif wildcards.ext == 'gtf':
+        return(config['reference_url']['annotation'])
+
+
+rule dl_annot:
+    """
+    Download current NCBI annotation (as specified in config.yaml)
+    and unzip, in case of URL,
+    or rsync in case of file
+    """
+    log:
+        "logs/dl_ref_{reference_name}.{ext}.log"
+    output:
+        "references_data/ref_{reference_name}.{ext}"
+    run:
+        url = get_dl_ref_input(wildcards)
+        if url.startswith("file://"):
+            url = url.replace("file://", "")
+            shell('rsync -t {url} {output[0]}')
+        else:
+            shell(
+                "wget -O {output[0]}.gz {url}; gunzip {output[0]}.gz"
+            )
+        if wildcards.ext == 'fna' and 'chrom_conv' in config.keys():
+            # convert chromosome names
+            conv = pd.read_csv(config['chrom_conv'], sep=':', header=None)
+            conv = dict(zip(conv[0], conv[1]))
+
+            records = SeqIO.parse(output[0], 'fasta')
+
+            tempfn = "references_data/ref_" + wildcards.reference_name + \
+                '_temp.' + wildcards.ext
+            with open(tempfn, 'w') as corrected:
+                for record in records:
+                    record.id = conv[record.id]
+                    SeqIO.write(record, corrected, 'fasta')
+
+            shell(
+                'mv {tempfn} {output[0]}'
+            )
+
+
+rule sub_to_rRNA:
+    """
+    Subset GTF to rRNA entries only,
+    to make reference BED for DASH
+    """
+    input:
+        gtf = 'references_data/ref_{reference_name}.gtf',
+        rrna = config['rrna_names']
+    log:
+        'logs/sub_to_rRNA_{reference_name}.log'
+    output:
+        'references_data/rRNA_{reference_name}.bed'
+    run:
+        # read input files
+        df = pd.read_csv(input.gtf, sep='\t', comment='#', header=None)
+        if len(df.columns) == 9:
+            df.columns = gtf_colnames
+        elif len(df.columns) == 6:
+            df.columns = bed_colnames
+
+        rrna = pd.read_csv(input.rrna, sep='\t', header=None)[0]
+
+        # filter entries matching the rRNAs
+        df['is_rrna'] = 'other'
+        for i in rrna:
+            df['is_rrna'] = np.where(df['name'].str.contains(i), 'rRNA', df['is_rrna'])
+        df = df.loc[df['is_rrna'] == 'rRNA', :].reset_index()
+
+        # sort
+        df = df.sort_values(by=['chrom', 'start', 'strand'])
+
+        # drop duplicates with same coordinates and strand, come from `exon` and `rna` entries
+        df = df[bed_colnames].drop_duplicates(
+            subset = ['chrom', 'start', 'end', 'strand'],
+            keep = 'first').reset_index(drop = True)
+
+        # output GTF format
+        df.to_csv(output[0], sep='\t', index=None, header=None)
+
+
+rule fix_BED_offset:
+    """
+    Rule sub_to_rRNA is wrong in making BED file because didn't offset the start
+    coordinates to be 0-based
+    BED format is 0-based, half-open [start-1, end), while GFF/GTF is 1-based, closed [start, end]
+    This rule corrects the coordinates for BED file format
+    """
+    input:
+        'references_data/rRNA_{reference_name}.bed',
+    log:
+        'logs/fix_BED_offset_{reference_name}.log'
+    output:
+        'references_data/fixed_start_rRNA_{reference_name}.bed'
+    run:
+        # read input files
+        df = pd.read_csv(input[0], sep='\t', header=None)
+        df.columns = bed_colnames
+        df['start'] = df['start'] -1
+        # output BED format
+        df.to_csv(output[0], sep='\t', index=None, header=None)
+
+
+rule genome_fai:
+    """
+    Make the fasta index
+    """
+    input:
+        'references_data/ref_{reference_name}.fna'
+    log:
+        'logs/genome_fai_{reference_name}.log'
+    output:
+        'references_data/ref_{reference_name}.fna.fai'
+    shell:
+        'samtools faidx -o {output[0]} {input[0]}'
+
+
+rule GCcontent:
+    """
+    Calculate GC content in rRNAs, and in the rest of genome
+    The goal is to evaluate whether the PAM sequence, GC-rich,
+    will be a problem in the organism
+    """
+    input:
+        rrna = 'references_data/rRNA_{reference_name}.bed',
+        fasta = 'references_data/ref_{reference_name}.fna',
+        fai = 'references_data/ref_{reference_name}.fna.fai'
+    log:
+        'logs/GCcontent_{reference_name}.log'
+    output:
+        'data/QC/GCcontent_{reference_name}.tsv'
+    run:
+        rrnabed = pybedtools.BedTool(input.rrna)
+        otherbed = rrnabed.complement(g=input.fai)
+        # nucleotide content
+        rrnadf = rrnabed.nucleotide_content(fi=input.fasta,
+                                   s=True).to_dataframe()
+
+        otherdf = otherbed.nucleotide_content(fi=input.fasta,
+                                   s=True).to_dataframe()
+        # column headers are wrong
+        otherdf.columns = otherdf.iloc[0,:]
+        otherdf = otherdf.iloc[1:,:]
+
+        df = pd.DataFrame({
+            'subset': ['rRNAs', 'other'],
+            'mean_GC': [rrnadf['8_pct_gc'].mean(),
+                        otherdf['5_pct_gc'].astype(float).mean()],
+            'stdev_GC': [rrnadf['8_pct_gc'].std(),
+                        otherdf['5_pct_gc'].astype(float).std()]
+        })
+        df.to_csv(output[0], sep='\t', index=None)
+
+
+rule run_DASH:
+    """
+    run reimplemented version of DASH
+    """
+    input:
+        fna = 'references_data/ref_{reference_name}.fna',
+        rRNA = 'references_data/fixed_start_rRNA_{reference_name}.bed',
+    params:
+        pam='NGG',
+        guide_length=lambda wc: int(wc.guidelen),
+        min_gc=30,
+        max_gc=80,
+        outfn=lambda wc: 'data/' + wc.reference_name + '_' + wc.guidelen + '/candidates'
+    log:
+        'logs/run_DASH_{reference_name}_{guidelen}.log'
+    output:
+        grna = 'data/{reference_name}_{guidelen}/candidates_grnas.fa',
+        oligo = 'data/{reference_name}_{guidelen}/candidates_oligos.csv',
+        cov = 'data/{reference_name}_{guidelen}/candidates_coverage.pdf',
+    run:
+        CandidateFinder(
+            fasta=input.fna,
+            annotations=input.rRNA,
+            pam=params.pam,
+            guide_length=params.guide_length,
+            min_gc=params.min_gc,
+            max_gc=params.max_gc,
+            outfn=params.outfn
+        )
+
+
+rule guide_gc:
+    """
+    calculate the GC content of the guides,
+    informative for the annealing temperature
+    """
+    input:
+        'data/{reference_name}_{guidelen}/candidates_grnas.fa'
+    log:
+        'logs/guide_gc_{reference_name}_{guidelen}.log'
+    output:
+        'data/QC/guide_gc_{reference_name}_{guidelen}.tsv',
+        'data/QC/guide_gc_summary_{reference_name}_{guidelen}.tsv',
+        'data/QC/guide_gc_{reference_name}_{guidelen}.pdf',
+    run:
+        records = SeqIO.parse(input[0], 'fasta')
+        gcdict = {}
+
+        # calculate individual GC content
+        for record in records:
+            gcdict[record.id] = GC(record.seq)
+        pd.DataFrame.from_dict(
+            gcdict, orient='index', columns=['GC_pct']
+            ).to_csv(output[0], sep='\t')
+
+        # summary
+        df = pd.DataFrame({
+            'name': [wildcards.reference_name],
+            'mean_GC': [statistics.mean(list(gcdict.values()))],
+            'stdev_GC': [statistics.stdev(list(gcdict.values()))]
+        })
+        df.to_csv(output[1], sep='\t', index=None)
+
+        # plot histogram
+        plt.close("all")
+        fig = plt.figure(figsize=(10, 10))
+        plt.hist(gcdict.values())
+        plt.title(wildcards.reference_name)
+        plt.xticks(rotation=90)
+        plt.ylabel("Number of guides")
+        plt.xlabel('GC percent')
+
+        # save Plot
+        plt.gcf().savefig(output[2])
+
+
+rule guide_tm:
+    """
+    calculate the Tm the guides (metling temperature),
+    assuming standard conditions
+    dnac1=25nM, dnac2=25nM, selfcomp=False, Na=50, K=0, Tris=0, Mg=0, dNTPs=0, saltcorr=5
+    """
+    input:
+        'data/{reference_name}_{guidelen}/candidates_grnas.fa'
+    log:
+        'logs/guide_tm_{reference_name}_{guidelen}.log'
+    output:
+        'data/QC/guide_tm_{reference_name}_{guidelen}.tsv',
+        'data/QC/guide_tm_summary_{reference_name}_{guidelen}.tsv',
+        'data/QC/guide_tm_{reference_name}_{guidelen}.pdf',
+    run:
+        records = SeqIO.parse(input[0], 'fasta')
+        tmdict = {}
+
+        # calculate individual GC content
+        for record in records:
+            tmdict[record.id] = Tm_NN(record.seq)
+        pd.DataFrame.from_dict(
+            tmdict, orient='index', columns=['Tm']
+            ).to_csv(output[0], sep='\t')
+
+        # summary
+        df = pd.DataFrame({
+            'name': [wildcards.reference_name],
+            'mean_Tm': [statistics.mean(list(tmdict.values()))],
+            'stdev_Tm': [statistics.stdev(list(tmdict.values()))]
+        })
+        df.to_csv(output[1], sep='\t', index=None)
+
+        # plot histogram
+        plt.close("all")
+        fig = plt.figure(figsize=(10, 10))
+        plt.hist(tmdict.values())
+        plt.title(wildcards.reference_name)
+        plt.xticks(rotation=90)
+        plt.ylabel("Number of guides")
+        plt.xlabel('Tm')
+
+        # save Plot
+        plt.gcf().savefig(output[2])
+
+
+

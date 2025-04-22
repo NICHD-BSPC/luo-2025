@@ -1,0 +1,17 @@
+# organism name and version
+reference_name: ecoli.GCF_000005845.2_ASM584v2
+
+# URL for reference fasta and annotation
+reference_url:
+  genome: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz
+  annotation: https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.gtf.gz
+
+# file with names or pattern for rRNAs, first column will be used to match as substring
+rrna_names: config/rrna_names.tsv
+
+# if genome chromosome names need to be converted, filename
+# comment out if not needed
+# chrom_conv: config/chrom-conversion-table.tsv
+
+# length of guide
+guide_length: [20]
