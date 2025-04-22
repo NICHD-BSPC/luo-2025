@@ -373,6 +373,9 @@ rule mappings:
 
         include_featuretypes = params.include_featuretypes
 
+        # GTF has extra attributes that cause gffutils to fail
+        shell("sed -e 's/; gene_function.*/;/g' {input[0]} > {input[0]}.tmp")
+
         res = []
         for f in gffutils.DataIterator(input[0] + '.tmp'):
 
