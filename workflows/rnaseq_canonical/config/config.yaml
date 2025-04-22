@@ -1,0 +1,82 @@
+sampletable: 'config/sampletable.tsv'
+
+patterns: 'config/rnaseq_patterns.yaml'
+
+# Which key in the `references` dict below to use
+organism: 'ecoli'
+
+# If not specified here, use the environment variable REFERENCES_DIR.
+references_dir: '../references/references_data'
+
+# to run featurecounts on all features. Points to a modified annotation where all features
+# were changed to exon.
+# Comment out if not needed
+quantify_all_features: '../annotation/data/NC_000913-3_gene_tRNA.patch4.gff'
+
+stranded: 'fr-firststrand'
+
+aligner:
+  index: 'bwa-mem'
+  tag: 'default'
+
+rrna:
+  index: 'bowtie2'
+  tag: 'rRNA'
+
+gtf:
+  tag: "default"
+
+salmon:
+  tag: "default"
+
+kallisto:
+  tag: "default"
+
+fastq_screen:
+  - label: Ecoli
+    organism: ecoli
+    tag: default
+  - label: rRNA
+    organism: ecoli
+    tag: rRNA
+
+references:
+
+  ecoli:
+    rRNA:
+      genome:
+        url:
+          - 'https://www.arb-silva.de/fileadmin/silva_databases/release_128/Exports/SILVA_128_LSURef_tax_silva_trunc.fasta.gz'
+          - 'https://www.arb-silva.de/fileadmin/silva_databases/release_128/Exports/SILVA_128_SSURef_Nr99_tax_silva_trunc.fasta.gz'
+        postprocess:
+          function: 'lib.common.filter_fastas'
+          args: 'Escherichia coli'
+        indexes:
+            - 'hisat2'
+            - 'bowtie2'
+
+    default:
+      genome:
+        url: 'ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz'
+        postprocess:
+          function: 'lib.postprocess.ecoli.to_chr'
+
+        indexes:
+          - 'bowtie2'
+          - 'bwa-mem'
+
+      annotation:
+        url: 'file://../annotation/data/NC_000913-3_gene_tRNA.patch3.gff' # contains the different features
+        postprocess:
+          function: 'lib.common.gzipped'
+        conversions:
+          - 'refflat'
+          - 'bed12'
+          - 'mappings'
+
+      transcriptome:
+        indexes:
+          - 'salmon'
+          - 'kallisto'
+
+
