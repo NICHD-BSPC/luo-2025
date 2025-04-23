@@ -22,3 +22,8 @@ patch3:
 patch4:
   file: FALSE
   description: 'all entries features should be exon so featurecounts can quantify in AS, IGR, UTR and gene'
+
+# FASTA genome file
+genome:
+  # reference fasta file, to build BWA index on
+  url: 'ftp://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/000/005/845/GCF_000005845.2_ASM584v2/GCF_000005845.2_ASM584v2_genomic.fna.gz'

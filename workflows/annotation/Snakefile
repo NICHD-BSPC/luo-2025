@@ -5,6 +5,10 @@ import csv
 import numpy as np
 import gffutils
 import re
+from Bio import SeqIO
+from snakemake import shell
+import gzip
+
 
 configfn = 'config/config.yaml'
 config = yaml.safe_load(open(configfn))
@@ -18,6 +22,9 @@ final_targets = [
     'data/NC_000913-3_gene_tRNA.patch3.gff',
     # all features are "exons" to be quantified by featurecounts
     'data/NC_000913-3_gene_tRNA.patch4.gff',
+    # fasta and bwa index
+    'data/ecoli_default.fasta',
+    'data/ecoli_default.fasta.bwt',
 ]
 
 rule targets:
@@ -446,4 +453,47 @@ rule patch4:
         my_csv(p3[gff_cols], output.gff)
 
 
+rule dl_fasta_ref:
+    """
+    Downloads the configured URL, change the chromosome name to chr, and
+    saves the resulting file to *.fasta
+    """
+    output:
+        'data/ecoli_default.fasta'
+    run:
+        # download fasta file
+        url = config['genome']['url']
+        tmp = output[0] +'.tmp.gz'
+        shell("wget -O {output[0]}.gz {url}")
+        # Asserts that there is only one sequence in the FASTA and renames it to "chr".
+        shell('gunzip -c {output[0]}.gz > {tmp}')
+        recs = list(SeqIO.parse(tmp, 'fasta'))
+        assert len(recs) == 1
+        recs[0].name = 'chr'
+        recs[0].id = 'chr'
+        recs[0].description = 'chr'
+        with open(output[0], 'wt') as fout:
+            SeqIO.write(recs, fout, 'fasta')
+        os.unlink(tmp)
 
+
+rule bwa_index:
+    """
+    Build bwa index
+    """
+    input:
+        'data/ecoli_default.fasta'
+    output:
+        'data/ecoli_default.fasta.bwt',
+    log:
+        'logs/ecoli_default.fasta.bwt.log'
+    resources:
+        mem_mb=8*1024,
+        disk_mb=8*1024,
+        runtime=2*120
+    run:
+        prefix = output[0].replace('.bwt', '')
+        shell(
+            'bwa index '
+            '{prefix} '
+        )
