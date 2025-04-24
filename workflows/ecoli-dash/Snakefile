@@ -20,7 +20,6 @@ import itertools
 from Bio.Data.IUPACData import ambiguous_dna_values, ambiguous_dna_complement
 
 # load dash
-sys.path.append('..')
 from dash_canonical import dash
 from dash_canonical import CandidateFinder
 
