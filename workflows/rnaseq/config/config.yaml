@@ -63,6 +63,7 @@ references:
 
         indexes:
           - 'bowtie2'
+          - 'bwa-mem'
 
       annotation:
         url: 'file://../annotation/data/NC_000913-3_gene_tRNA.patch3.gff' # contains the different features

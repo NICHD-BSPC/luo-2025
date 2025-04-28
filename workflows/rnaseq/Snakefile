@@ -77,9 +77,8 @@ if 'quantify_all_features' in config.keys():
 final_targets.append('../references/references_data/ecoli/default/annotation/ecoli_default.mapping.tsv.gz')
 
 # downstream Rmds
-final_targets.append('downstream-FMD/rnaseq.html')
-final_targets.append('downstream-AX/rnaseq.html')
-
+for batch in set(c.sampletable['batch']):
+    final_targets.append('downstream-' + batch + '/rnaseq.html')
 
 def render_r1_r2(pattern, r1_only=False):
     return expand(pattern, sample='{sample}', n=c.n)
@@ -1180,40 +1179,23 @@ if 'merged_bigwigs' in config:
             wrapper_for('average-bigwigs/wrapper.py')
 
 
-
-rule downstream_FMD_rmarkdown:
+rule downstream_rmarkdown:
     input:
-        rmd='downstream-FMD/rnaseq.Rmd',
+        rmd='downstream-{batch}/rnaseq.Rmd',
         txt='data/rnaseq_aggregation/featurecounts_all_features_allow_overlap.txt',
         st='config/sampletable.tsv',
         mappings='../references/references_data/ecoli/default/annotation/ecoli_default.mapping.tsv.gz',
         gtf='../references/references_data/ecoli/default/annotation/ecoli_default.gtf',
     output:
-        html='downstream-FMD/rnaseq.html',
-        xlsx='downstream-FMD/results/consolidated_results.xlsx',
+        html='downstream-{batch}/rnaseq.html',
+#        xlsx='downstream-AX/results/consolidated_results.xlsx',
     conda:
         '../../env-r.yaml'
+    resources:
+            mem_mb=1024 * 16,
+            runtime=autobump(120)
     log:
-        'logs/downstream_FMD_rmarkdown.log'
-    shell:
-        'Rscript -e '
-        '''"rmarkdown::render('{input.rmd}', output_file='rnaseq.html', params=list(featurecounts_fn='../{input.txt}', mappings='../{input.mappings}', gtf='../{input.gtf}', sampletable='../{input.st}'))"'''
-        '> {log} 2>&1'
-
-rule downstream_AX_rmarkdown:
-    input:
-        rmd='downstream-AX/rnaseq.Rmd',
-        txt='data/rnaseq_aggregation/featurecounts_all_features_allow_overlap.txt',
-        st='config/sampletable.tsv',
-        mappings='../references/references_data/ecoli/default/annotation/ecoli_default.mapping.tsv.gz',
-        gtf='../references/references_data/ecoli/default/annotation/ecoli_default.gtf',
-    output:
-        html='downstream-AX/rnaseq.html',
-        xlsx='downstream-AX/results/consolidated_results.xlsx',
-    conda:
-        '../../env-r.yaml'
-    log:
-        'logs/downstream_AX_rmarkdown.log'
+        'logs/downstream_{batch}_rmarkdown.log'
     shell:
         'Rscript -e '
         '''"rmarkdown::render('{input.rmd}', output_file='rnaseq.html', params=list(featurecounts_fn='../{input.txt}', mappings='../{input.mappings}', gtf='../{input.gtf}', sampletable='../{input.st}'))"'''
