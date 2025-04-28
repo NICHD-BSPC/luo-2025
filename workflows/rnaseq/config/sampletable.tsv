@@ -27,3 +27,11 @@ Hfq_IPRNA_antiHfq_2	Hfq_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA	PE	../../demuxed-dat
 R16A_IPRNA_antiHfq_2	R16A_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA	PE	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_2_2.fastq.gz	AX	14
 Hfq-FLAG_IPRNA_antiHfq_2	Hfq-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA	PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_2_2.fastq.gz	AX	15
 R16A-FLAG_IPRNA_antiHf2	R16A-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA	PE	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHf2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHf2_2.fastq.gz	AX	16
+Hfq_ctrlplasmid_totalRNA_1	Hfq_ctrlplasmid_totalRNA		no	Total RNA	PE	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_totalRNA_1_2.fastq.gz	GRIL	1
+Hfq_t4rnl1_totalRNA_1	Hfq_t4rnl1_totalRNA		no	Total RNA	PE	../../demuxed-data/fastq241218/Hfq_t4rnl1_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_t4rnl1_totalRNA_1_2.fastq.gz	GRIL	2
+R16A_ctrlplasmid_totalRNA_1	R16A_ctrlplasmid_totalRNA		no	Total RNA	PE	../../demuxed-data/fastq241218/R16A_ctrlplasmid_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/R16A_ctrlplasmid_totalRNA_1_2.fastq.gz	GRIL	3
+R16A_t4rnl1_totalRNA_1	R16A_t4rnl1_totalRNA		no	Total RNA	PE	../../demuxed-data/fastq241218/R16A_t4rnl1_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/R16A_t4rnl1_totalRNA_1_2.fastq.gz	GRIL	4
+Hfq_ctrlplasmid_totalRNA_2	Hfq_ctrlplasmid_totalRNA		no	Total RNA	PE	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_totalRNA_2_2.fastq.gz	GRIL	7
+Hfq_t4rnl1_totalRNA_2	Hfq_t4rnl1_totalRNA		no	Total RNA	PE	../../demuxed-data/fastq241218/Hfq_t4rnl1_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_t4rnl1_totalRNA_2_2.fastq.gz	GRIL	8
+R16A_ctrlplasmid_totalRNA_2	R16A_ctrlplasmid_totalRNA		no	Total RNA	PE	../../demuxed-data/fastq241218/R16A_ctrlplasmid_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/R16A_ctrlplasmid_totalRNA_2_2.fastq.gz	GRIL	9
+R16A_t4rnl1_totalRNA_2	R16A_t4rnl1_totalRNA		no	Total RNA	PE	../../demuxed-data/fastq241218/R16A_t4rnl1_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/R16A_t4rnl1_totalRNA_2_2.fastq.gz	GRIL	10
