@@ -1,0 +1,661 @@
+---
+title: Summary RILseq analysis
+output:
+    html_document:
+        code_folding: hide
+        toc: true
+        toc_float: true
+        toc_depth: 3
+params:
+  subgroup: 'R16A_antiHfq'
+  sampletable: '../config/sampletable.tsv'
+#  mappings: False
+#  gtf: False
+  gtf: '../../annotation/data/NC_000913-3_gene_tRNA.patch3.gff'
+---
+
+```{r global_options, include=FALSE}
+# Sets up global options for rendering RMarkdown into HTML.
+knitr::opts_chunk$set(
+    warning=FALSE,
+    message=FALSE,
+    cache.lazy = FALSE, # to fix error:
+                        # Error in lazyLoadDBinsertVariable(vars[i], from, datafile, ascii, compress,  :
+                        # long vectors not supported yet: connections.c:6074
+    cache.extra_file_dep_1 = file.info(params$sampletable)$mtime
+    )
+```
+
+
+```{r libraries}
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(plotly)
+library(cowplot)
+# add genes
+library(rtracklayer)
+library(data.table)
+library(GenomicRanges)
+
+# functions
+source('../downstream-helpers/helpers.R')
+```
+
+# Sampletable
+
+```{r data}
+subgroup_i <- params$subgroup
+cat(paste0('\n\nHere we subset the samples to ', subgroup_i, ' samples.\n\n'))
+spt <- read.csv(params$sampletable, sep='\t')
+# subset to subgroup
+spt <- spt %>%
+  filter(subgroup == subgroup_i)
+knitr::kable(spt %>%
+                select(-layout, -orig_filename, -orig_filename_R2)
+                )
+```
+
+# Number of chimeric fragments
+
+```{r cnts, results='asis', cache=TRUE}
+cnts <- list()
+
+for (sp in spt[['samplename']]) {
+  prfx <- paste0('../data/rnaseq_rilseq/', sp, '/', sp)
+  # total and mapped reads
+  cnts[[sp]] <- total_mapped(paste0(prfx, '_R1.cutadapt.fastq_bwa.bam.rillibsize'))
+  # all rilseq fragments
+  cnts[[sp]][['all_fragments']] <- fragments(paste0(prfx, '_all_fragments.txt'), 'total')
+  # single rilseq fragments
+  cnts[[sp]][['single_fragments']] <- fragments(paste0(prfx, '_all_fragments.txt'), 'single')
+  # chimera rilseq fragments
+  cnts[[sp]][['chimera_fragments']] <- fragments(paste0(prfx, '_all_fragments.txt'), 'chimera')
+ # significant rilseq fragments
+  cnts[[sp]][['significant_fragments']] <- fragments(paste0(prfx, '_significant_fragments.txt'), 'total')
+}
+```
+
+```{r, results='asis'}
+cnts.df <- data.frame(t(
+    do.call(cbind, cnts)))
+# there was header lines, so remove 1
+cnts.df[['all_fragments']] <- lapply(cnts.df[['all_fragments']], function(x) {x-1})
+cnts.df[['significant_fragments']] <- lapply(cnts.df[['significant_fragments']], function(x) {x-1})
+cnts.df[['ratio_signif_all_fragments']] <- lapply(rownames(cnts.df), function(x) {
+    cnts.df[x, 'significant_fragments'][[1]] / cnts.df[x, 'all_fragments'][[1]]})
+cnts.df[['ratio_signif_mappedreads']] <- lapply(rownames(cnts.df), function(x) {
+    cnts.df[x, 'significant_fragments'][[1]] / cnts.df[x, 'mapped'][[1]]})
+
+cols <- c('ratio_signif_all_fragments', 'ratio_signif_mappedreads',
+          'significant_fragments', 'all_fragments',
+          'single_fragments', 'chimera_fragments',
+          'mapped', 'total')
+knitr::kable(cnts.df[cols])
+```
+
+# Summary plots
+
+## Single vs. chimeric
+
+```{r, results='asis'}
+sub.df <- cnts.df %>%
+  select(single_fragments, chimera_fragments) %>%
+  mutate(sample = rownames(cnts.df)) %>%
+  tidyr::pivot_longer(! sample, names_to='fragment_type', values_to='raw_count')
+sub.df[['raw_count']] <- unlist(sub.df[['raw_count']])
+
+ggplot(sub.df, mapping = aes(x=sample, y=raw_count, fill=fragment_type)) +
+  geom_bar(stat = "identity") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+```
+
+## Percentage significant
+
+```{r, results='asis'}
+sub.df <- cnts.df %>%
+  select(ratio_signif_all_fragments) %>%
+  mutate(sample = rownames(cnts.df))
+
+sub.df[['group']] <- stringr::str_replace(sub.df[['sample']], '_1|_2', '')
+
+sub.df[['ratio_signif_all_fragments']] <- unlist(sub.df[['ratio_signif_all_fragments']])
+
+ggplot(sub.df, mapping = aes(x=sample, y=ratio_signif_all_fragments, fill=group)) +
+  geom_bar(stat="identity") +
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 45, hjust=1))
+```
+
+
+
+# Interaction plots {.tabset}
+
+The circos plots below show the start and end positions of the significant chimeric fragments.
+
+The ticks on the inner circle represent the positions of:
+
+- sRNAs in orange,
+- tRNAs in blue,
+- rRNAs in red.
+
+```{r plots, results='asis'}
+for (gp in unique(spt[['group']])) {
+  cat(paste0('\n\n## ', gp, '\n\n'))
+  # get corresponding samplenames
+  idx <- spt[['group']] ==gp
+  for (sp in spt[idx, 'samplename'] ) {
+    cat(paste0('\n\n**', sp, '**\n\n'))
+    print_svg(sp)
+  }
+}
+```
+
+# Summary_RILSeq_S-chimeras
+
+```{r, results='asis'}
+cat(paste0('\n\n**Link to output file:** [Summary_RILSeq_S-chimeras_',
+           subgroup_i, '.xlsx](Summary_RILSeq_S-chimeras_', subgroup_i, '.xlsx).'))
+```
+
+The RILseq output files `{sample}_all_fragments.txt`, containing all single and chimera fragments, and
+`{sample}_significant_fragments.txt`, containing significant interactions chimera fragments, are used to
+generate the `Summary_RILSeq_S-chimeras.xlsx` file.
+
+The updated annotation [`r params$gtf`](`r params$gtf`)
+was used to map the start coordinate
+of the significant chimeric fragments RNA1 and RNA2. The annotation contains mRNAs, 5' UTRs, 3' UTRs, sRNAs,
+antisense and intergenic regions. RNA1 and RNA2 of each significant chimera are assigned a feature when their
+supporting fragments start coordinate overlap with the feature. All features are reported in case of
+overlapping features. When the supporting fragments overlap with several features, they are all reported,
+unless the percentage of RNA reads overlapping with a gene is more than the min_ratio (0.7), in that case
+only the feature with the majority of reads is reported.
+
+The summary excel table contains a subset of the columns from the significant chimera files, and additional
+gene information from the annotation. Individual sample tabs contain the following columns:
+
+- `ID`: sample name
+- `RNA1.EcoCyc.ID`; `RNA2.EcoCyc.ID`: gene ID from Ecocyc associated with RNA1 and RNA2 respectively of the significant chimera
+- `TypeRNA1`; `TypeRNA2`: feature type associated with RNA1 and RNA2 respectively
+- `RNA1_name`; `RNA2_name`: gene name
+- `RNA1_description`; `RNA2_description`: gene description / function
+- `Start.of.RNA1.first.read`; `Start.of.RNA2.first.read`: start coordinate of first RNA read supporting the chimera
+- `Start.of.RNA1.last.read`; `Start.of.RNA2.last.read`: start coordinate of last RNA read supporting the chimera
+- `RNA1.strand`; `RNA2.strand`: strand of RNA read
+- `interactions`: number of interaction supporting the chimera RNA1-RNA2
+- `other.interactions.of.RNA1`: number of interaction of RNA1 other than with RNA2
+- `other.interactions.of.RNA2`: : number of interaction of RNA2 other than with RNA1
+- `total.other.interactions`: total other interactions
+- `odds.ratio` and `Fisher.s.exact.test.p.value`: described in https://github.com/asafpr/RILseq.
+
+Additonal tabs are aggregating the biological replicates. Only chimera regions with identical RNA1 and RNA2
+associated features are included in those tabs. They summarize interactions found in both replicates.
+
+
+The following paragraph is copied from https://github.com/asafpr/RILseq and explains the calculation
+for significant chimera:
+
+> Reporting Over-represented Interacting Region
+>
+> Since the sequencing results contain non-specific chimeras, another stage is needed to remove the noise
+> of the experiment. This is done by comparing the number of reads supporting an interaction to the number of
+> reads expected at random. Simply put we compute a 2x2 contingency table with the number of reads like this:
+>
+|               | region 1      | other regions |
+|---------------|:-------------:|--------------:|
+| region 2      |  K            |         L     |
+| other regions |  M            |         N     |
+
+> L and M include the number of single reads as well, the statistics test if two regions interact more
+> frequently than expected by random. If K is larger than expected the two regions are probably in actual
+> interaction in vivo. The odds ratio is computed by (K/L)/(M/N) and the p-value is computed using Fisher's
+> exact test, testing only if K is larger than expected (single-tailed test)
+>
+> The interacting regions are searched by dividing the genome to 100 nt non-overlapping windows (set with
+> --seglen) and testing if the number of interactions is larger than expected if there are at least 5
+> interactions between them (set with --min_int). If the p-value is smaller than 0.05 (--max_pv) report this
+> pair. To avoid re-reporting adjacent regions, the regions can be expanded up to 500 nts (--maxsegs) and the
+> combination of regions with the lower p-value will be reported (after Bonferroni correction).
+
+
+```{r read_chimeras_input, results='asis', cache=TRUE}
+#*  Add gene names for RNA1 and RNA2 and count number of libraries for
+#*  each chimera. Currently, the unified s-chimeras are generated from
+#*  two samples only.
+#
+
+# import annotation
+gtf_file <- params$gtf
+cat(paste0('\n\nAnnotation file is ', gtf_file, '.\n\n'))
+annotation <- import(gtf_file, format="GFF")
+
+get_fn <- function(sample.i, group) {
+  return(paste0('../data/rnaseq_rilseq/', sample.i, '/', sample.i, '_', group, '_fragments.txt'))
+  }
+
+sig.chimeras <- list()
+fragments <- list()
+
+for (sample.i in spt[['samplename']]){
+  # read significant chimeras (from _significant_fragments.txt)
+  sig.chimeras[[sample.i]] <- read.csv(get_fn(sample.i, 'significant'), sep='\t')
+  # read all chimeras (from _all_fragments.txt)
+  fragments[[sample.i]] <- read.csv(get_fn(sample.i, 'all'), sep='\t', header=FALSE)
+  names(fragments[[sample.i]]) <- c('RNA1.chromosome', 'Start.of.RNA1.first.read', 'RNA1.strand',
+                      'RNA2.chromosome', 'Start.of.RNA2.first.read', 'RNA2.strand',
+                      'name', 'type')
+}
+
+# unified samples significant fragments
+unified <- list()
+for (gp in unique(spt[['group']])) {
+  unified[[gp]] <- read.csv(get_fn(paste0(gp, '_unified'), 'significant'), sep='\t')
+}
+```
+
+
+```{r get_RNAnames, results='asis', cache=TRUE, dependson='read_chimeras_input'}
+RNA1_cols <- c(
+  'RNA1.chromosome',
+  'Start.of.RNA1.first.read',
+  'Start.of.RNA1.last.read',
+  'RNA1.strand')
+RNA2_cols <- c(
+  'RNA2.chromosome',
+  'Start.of.RNA2.last.read',
+  'Start.of.RNA2.first.read',
+  'RNA2.strand')
+
+# the fragment df does not have Start.of.RNA#.aste.read:
+RNA1_cols_fg <- c(
+  'RNA1.chromosome',
+  'Start.of.RNA1.first.read',
+  'Start.of.RNA1.first.read',
+  'RNA1.strand')
+RNA2_cols_fg <- c(
+  'RNA2.chromosome',
+  'Start.of.RNA2.first.read',
+  'Start.of.RNA2.first.read',
+  'RNA2.strand')
+
+min_ratio <- 0.7
+
+RNA_names <- list()
+for (sample.i in spt[['samplename']]){
+  if (!is.null(nrow(sig.chimeras[[sample.i]])) & (nrow(sig.chimeras[[sample.i]]) > 1)) {
+    RNA_names[[sample.i]] <- cbind(
+      RNA1_name=rep("", nrow(sig.chimeras[[sample.i]])),
+      RNA2_name=rep("", nrow(sig.chimeras[[sample.i]]))
+    )
+
+    # Prepare GRanges ahead of time
+    fragment.chimera.df <- fragments[[sample.i]] %>% filter(type == 'chimera') # all chimeras, significant or not
+    fragment.gr.1 <- convert_to_Granges(fragment.chimera.df[RNA1_cols_fg]) # all hits (chimera or not) for RNA1, as GRanges
+    fragment.gr.2 <- convert_to_Granges(fragment.chimera.df[RNA2_cols_fg]) # all hits (chimera or not) for RNA2, as GRanges
+
+    # For each chimera, get all associated reads 
+    for(chi.i in 1:nrow(sig.chimeras[[sample.i]])) {
+
+      # Split significant chimera into RNA1 portion and RNA2 portions; gather
+      # all overlapping hits from full (significant or not) fragments; our
+      # target fragments are those that overlap in both RNA1 and RNA2.
+      target_chimera.1 <- convert_to_Granges(sig.chimeras[[sample.i]][chi.i, RNA1_cols])
+      target_chimera.2 <- convert_to_Granges(sig.chimeras[[sample.i]][chi.i, RNA2_cols])
+      hits.1 <- as.matrix(findOverlaps(fragment.gr.1, target_chimera.1))
+      hits.2 <- as.matrix(findOverlaps(fragment.gr.2, target_chimera.2))
+      hits.all <- data.table(rbind(hits.1, hits.2), key="queryHits,subjectHits")
+      hits.both <- unique(hits.all[duplicated(hits.all)])
+      target_fragments <- fragment.chimera.df[as.numeric(hits.both$queryHits),]
+
+      # for those reads, get the names of the genes associated to RNA1
+      RNA1_gr <- fragment.gr.1[as.numeric(hits.both$queryHits),]
+      RNA1_names <- findGeneNamesByOverlaps(RNA1_gr, annotation, min_ratio)
+
+      # and to RNA2
+      RNA2_gr <- fragment.gr.2[as.numeric(hits.both$queryHits),]
+      RNA2_names <- findGeneNamesByOverlaps(RNA2_gr, annotation, min_ratio)
+
+      # append to larger RNA_names list
+      RNA_names[[sample.i]][chi.i,] <- c(RNA1_names, RNA2_names)
+    }
+  }
+}
+```
+
+
+
+
+```{r get_other_meta, results='asis', cache=TRUE, dependson='get_RNAnames', eval=FALSE}
+# get the groups of unified files
+unified_fns <- list()
+for (x in spt[['group']] %>% unique()) {
+  unified_fns[[x]] <- spt[ spt[['group']] == x, 'samplename']
+}
+
+lib_info <- list()
+
+for (gp in names(unified_fns)) {
+  lib_info[[gp]] <- countSChimeraLibraries(unified[[gp]],
+                                     sig.chimeras[[ unified_fns[[gp]][[1]] ]],
+                                     sig.chimeras[[ unified_fns[[gp]][[2]] ]],
+                                     unified_fns[[gp]])
+
+
+}
+
+
+```
+
+```{r sig.summary}
+# goal is to make table with those columns:
+target_cols <- c('ID', # i.e. WT-1
+                 'RNA1.EcoCyc.ID', #: from mapping Start of RNA1 first read in signif frag file to genes GFF 
+                 'RNA2.EcoCyc.ID', # Start of RNA2 first read to genes GFF
+                 'TypeRNA1', # GFF
+                 'TypeRNA2', # GFF
+                 'RNA1_name', # GFF
+                 'RNA2_name', # GFF
+                 'RNA1_description', # GFF
+                 'RNA2_description', # GFF
+                 'Start.of.RNA1.first.read', # directly from signif frag file
+                 'Start.of.RNA1.last.read', # directly from signif frag file
+                 'RNA1.strand', # directly from signif frag file
+                 'Start.of.RNA2.last.read', # directly from signif frag file
+                 'Start.of.RNA2.first.read', # directly from signif frag file
+                 'RNA2.strand', # directly from signif frag file
+                 'interactions', # directly from signif frag file
+                 'other.interactions.of.RNA1', # directly from signif frag file
+                 'other.interactions.of.RNA2', # directly from signif frag file
+                 'total.other.interactions', # directly from signif frag file
+                 'odds.ratio', # directly from signif frag file
+                 'Fisher.s.exact.test.p.value' # directly from signif frag file
+                 )
+
+# for the inner merged repl 1 + repl2
+common_target_cols <- c('TypeRNA1', 'TypeRNA2',
+                  'RNA1_name', 'RNA2_name', 'RNA1_description', 'RNA2_description',
+                  'RNA1.strand', 'RNA2.strand',
+                  'interactions.1', 'interactions.2',
+                  'other.interactions.of.RNA1.1', 'other.interactions.of.RNA1.2',
+                  'other.interactions.of.RNA2.1', 'other.interactions.of.RNA2.2',
+                  'total.other.interactions.1', 'total.other.interactions.2',
+                  'odds.ratio.1', 'odds.ratio.2',
+                  'Fisher.s.exact.test.p.value.1', 'Fisher.s.exact.test.p.value.2')
+
+
+ann_df <- as.data.frame(annotation)
+# some regions are split because of internal other region, causing gene_id to
+# be duplicated. Here we only need the conversion gene_id <-> gene_name
+ann_df <- ann_df[!duplicated(ann_df$gene_id), ]
+rownames(ann_df) <- ann_df[['gene_id']]
+
+
+unified_fns <- list()
+for (x in spt[['group']] %>% unique()) {
+  unified_fns[[x]] <- spt[ spt[['group']] == x, 'samplename']
+}
+
+for (sp in names(sig.chimeras)) {
+  df.i <- sig.chimeras[[sp]]
+  print(sp)
+  if ((nrow(df.i) > 0) &  !is.null(RNA_names[[sp]]) ){
+    # construct missing columns
+    df.i[['ID']] <- sp
+    df.i[['RNA1.EcoCyc.ID']] <- RNA_names[[sp]][,'RNA1_name']
+    df.i[['RNA2.EcoCyc.ID']] <- RNA_names[[sp]][,'RNA2_name']
+    df.i[['TypeRNA1']] <- get_ann_col(df.i[['RNA1.EcoCyc.ID']], 'type.1')
+    df.i[['TypeRNA2']] <- get_ann_col(df.i[['RNA2.EcoCyc.ID']], 'type.1')
+    df.i[['RNA1_name']] <- get_ann_col(df.i[['RNA1.EcoCyc.ID']], 'gene_name')
+    df.i[['RNA2_name']] <- get_ann_col(df.i[['RNA2.EcoCyc.ID']], 'gene_name')
+    df.i[['RNA1_description']] <- get_ann_col(df.i[['RNA1.EcoCyc.ID']], 'gene_function')
+    df.i[['RNA2_description']] <- get_ann_col(df.i[['RNA2.EcoCyc.ID']], 'gene_function')
+
+    sig.chimeras[[sp]] <- df.i
+  }
+}
+
+
+# merge inner the replicates
+common_cols <- c('TypeRNA1', 'TypeRNA2', 'RNA1_name', 'RNA2_name',
+  'RNA1_description', 'RNA2_description', 'RNA1.strand', 'RNA2.strand')
+for (gp in names(unified_fns)) {
+  if (all(common_cols %in% names(sig.chimeras[[ unified_fns[[gp]][[1]] ]])) &
+      all(common_cols %in% names(sig.chimeras[[ unified_fns[[gp]][[2]] ]]))) {
+
+    sig.chimeras[[gp]] <- merge(sig.chimeras[[ unified_fns[[gp]][[1]] ]],
+                              sig.chimeras[[ unified_fns[[gp]][[2]] ]],
+                              by=common_cols,
+                              suffixes=c('.1', '.2'))
+
+  } else {
+    # if one or more of the samples don't have significant fragment, return empty dataframe
+    sig.chimeras[[gp]] <- data.frame(
+      matrix(ncol=length(common_target_cols),nrow=0, dimnames=list(NULL, common_target_cols))
+      )
+  }
+}
+
+
+
+# save the results in excel file
+exported_excel(sig.chimera, unified_fns,
+               file=paste0('Summary_RILSeq_S-chimeras_', subgroup_i, '.xlsx'))
+```
+
+# Summary_interactions_with_IP
+
+```{r, results='asis'}
+cat(paste0('\n\n**Link to output file:** [Summary_interactions_with_IP_',
+           subgroup_i, '.xlsx](Summary_interactions_with_IP_', subgroup_i, '.xlsx).'))
+```
+
+The RILseq output files `{sample}_all_fragments.txt`, containing all single and chimera fragments, and
+the BAM files containing all mapped reads, are used to
+generate the `Summary_interactions_with_IP.xlsx` file.
+
+Briefly, the read IDs corresponding to either chimera reads or single reads were extracted from
+the files `{sample}_all_fragments.txt`. BAM files were then subsetted by those read IDs to
+generate BAM files of chimera reads only or of single reads only. `feat**ureCounts` was used with the
+following parameters to count the reads mapping to any features from the updated annotation:
+
+- `-t 3UTR,IGR,5UTR,AS,exon,TU,mRNA,other-ncRNA,cis_AS_with_trans_t`: include all features
+- `-g gene_name `: specify attribute type in GTF annotation to use as name
+- `-s 2`: reverse stranded library
+- `-O`: assign reads to all their overlapping features
+- `-M`: multi-mapping reads will also be counted
+- `--primary`: count primary alignments only
+- `--ignoreDup`: ignore duplicate reads in read counting. The whole read pair is ignored if one of the reads is a duplicate read for paired end data.
+- `-p`: specify that input data contain paired-end reads
+- `-P`: check validity of paired-end distance when counting read pairs. Use -d and -D to set thresholds
+- `-B`: only count read pairs that have both ends aligned.
+
+BAM files from the Total RNAseq with matching samples, experiment `rnaseq-FMD-20190507`, were
+processed the same way.
+
+The output excel file contains tabs with the following information:
+
+- `RILseq_all_chimeras` and `RILseq_singles` include the raw RILseq count per feature and sample. FPM means
+  fragment per million, the raw count per feature was multiplied by 1e6 and divided by total in either chimera
+  or single read subset.
+
+- `totalRNA` tab contains the raw and FPM counts from the total RNA-seq 20190507.
+
+- `IP_only` tab summarizes the IP enrichment calculations.
+
+  The concept of IP enrichment is comparing the RNA fraction bound by Hfq (Hfq IP) to the total RNA level (total RNA-seq 20190507).
+  The RIL-Seq, single + chimeras, give us the information of Hfq IP RNA:
+
+  IP enrichment = Hfq IP / Total RNA = (RILseq_chimeras + RILseq_singles) / Total RNA
+
+  All the numbers are FPM. The normalization is recalculated on the total RILseq_chimeras + RILseq_singles, see the
+  sample-specific tabs:
+
+- Sample-specific tabs contain the same raw counts and FPM as `RILseq_all_chimeras`, `RILseq_singles` and
+  `totalRNA`, grouped per sample type and for replicate 1 (R1) and replciate 2 (R2). It also contains all the
+  calculations for the `IP_only` tab, generated as follow:
+
+  - Counts Total RILseq is the average of raw counts chimera and singles, for each replicate.
+
+  - FPM Total RILseq is Counts Total RILseq normalized to total reads in chimera and single
+
+  - IP enrich R1 = FPM Total RILseq R1 / FPM totalRNA R1 ; same calculation for R2
+
+  - IP enrich average is the IP enrich R1 and IP enrich R2
+
+
+
+```{r read_rawcounts}
+get_rawfn <- function(group) {
+  return(paste0('../data/rnaseq_rilseq/featurecounts_', group, '.txt'))
+  }
+
+raw.counts <- list()
+
+cleanup <- list('chimera' = '_chimera.bam',
+                'single' = '_single.bam',
+                'bulkRNAseq' = '.cutadapt.markdups.bam')
+
+ann_df <- ann_df %>%
+  distinct(gene_name, .keep_all = TRUE)
+
+for (sbst in c('chimera', 'single', 'bulkRNAseq')) {
+  raw.counts[[sbst]] <- read.csv(get_rawfn(sbst), sep='\t', comment.char='#', check.names=FALSE)
+  # clean up column names
+  names(raw.counts[[sbst]]) <- lapply(names(raw.counts[[sbst]]), function(x) {
+    gsub("^.*/", "", x)}) %>% unlist()
+  names(raw.counts[[sbst]]) <- lapply(names(raw.counts[[sbst]]), function(x) {
+    gsub(cleanup[[sbst]], "", x)}) %>% unlist()
+  # add gene type
+  raw.counts[[sbst]][['Type']] <- lapply(raw.counts[[sbst]][['Geneid']], function(x) {
+    ann_df[ ann_df[['gene_name']] == x, 'type.1'] })
+}
+```
+
+```{r calc_norm}
+# sample names do not match between RILseq and RNAseq,
+# using named list to match the samplenames
+sample_match <- function(x) {
+  # cover all corner-cases of samplenames
+  stringr::str_replace(x, '-antiHfq', '_totalRNA_noIP') %>%
+    stringr::str_replace('antiHfq', 'totalRNA_noIP') %>%
+    stringr::str_replace('antiFLAG', 'totalRNA_noIP')
+}
+
+#  list('R16A_antiHfq_1'=' R16A_totalRNA_noIP_1',
+
+for (sbst in c('chimera', 'single', 'bulkRNAseq')) {
+  for (sp in spt[['samplename']] ) {
+    if (sbst == 'bulkRNAseq') {
+      spname <- sample_match(sp)
+    } else {
+      spname <- sp
+    }
+    total <- raw.counts[[sbst]][[spname]] %>% sum()
+    raw.counts[[sbst]][[paste0('FPM_', spname)]] <- raw.counts[[sbst]][[spname]] * 1e6 / total
+  }
+}
+```
+
+```{r sample_spe_tabs}
+sp.tabs <- list()
+
+# set the order of columns in final table
+  # Gene ID
+  # Counts RILseq chimeras R1
+  # Counts RILseq singles R1
+  # Counts total RNA singles R1
+  # Counts Total RILseq R1
+  # FPM RILseq chimeras R1
+  # FPM RILseq Singles R1
+  # FPM Total RILseq R1
+  # FPM total RNA singles R1
+  # IP enrich R1
+  # same for R2
+  # IP enrich av WT
+col_idx_order <- c(1, 2, 6, 10, 14, 4, 8, 15, 12, 18,
+                      3, 7, 11, 15, 5, 9, 17, 13, 19,
+                      20)
+
+for (sp in unique(spt[['group']])) {
+  cols <- c('Geneid', paste0(sp, '_1'), paste0(sp, '_2'),
+             paste0('FPM_', sp, '_1'), paste0('FPM_', sp, '_2'))
+  bulkRNAcols <- c('Geneid', paste0(sample_match(sp), '_1'), paste0(sample_match(sp), '_2'),
+             paste0('FPM_', sample_match(sp), '_1'), paste0('FPM_', sample_match(sp), '_2'))
+
+  # merge the chimera, single and bulk total RNA, using the Geneid as index
+  sp.tabs[[sp]] <- merge(raw.counts[['chimera']][cols], raw.counts[['single']][cols],
+                         by='Geneid', suffixes=c('_chimera', '_single'))
+  if (all(cols %in% names(raw.counts[['bulkRNAseq']])) ) {
+    sp.tabs[[sp]] <- merge(sp.tabs[[sp]],
+                         raw.counts[['bulkRNAseq']][bulkRNAcols],
+                         by='Geneid', suffixes=c('', '_totalRNA'))
+  }
+  # add total RILseq (chimera + single)) and recalculate FPM
+  sp.tabs[[sp]][['Counts Total RILseq R1']] <- sp.tabs[[sp]][[paste0(sp, '_1_chimera')]] +
+                                               sp.tabs[[sp]][[paste0(sp, '_1_single')]]
+  sp.tabs[[sp]][['FPM Total RILseq R1']] <- sp.tabs[[sp]][['Counts Total RILseq R1']] * 1e6 /
+                                               sum(sp.tabs[[sp]][['Counts Total RILseq R1']] )
+  sp.tabs[[sp]][['Counts Total RILseq R2']] <- sp.tabs[[sp]][[paste0(sp, '_2_chimera')]] +
+                                               sp.tabs[[sp]][[paste0(sp, '_2_single')]]
+  sp.tabs[[sp]][['FPM Total RILseq R2']] <- sp.tabs[[sp]][['Counts Total RILseq R2']] * 1e6 /
+                                               sum(sp.tabs[[sp]][['Counts Total RILseq R2']] )
+  # calculate IP and average replicates
+  if (all(cols %in% names(raw.counts[['bulkRNAseq']])) ) {
+    sp.tabs[[sp]][['IP enrich R1']] <- sp.tabs[[sp]][['FPM Total RILseq R1']] /
+                                     sp.tabs[[sp]][[paste0('FPM_', sample_match(sp), '_1')]]
+    sp.tabs[[sp]][['IP enrich R2']] <- sp.tabs[[sp]][['FPM Total RILseq R2']] /
+                                     sp.tabs[[sp]][[paste0('FPM_', sample_match(sp), '_2')]]
+    sp.tabs[[sp]][['IP enrich average']] <- (sp.tabs[[sp]][['IP enrich R1']] + sp.tabs[[sp]][['IP enrich R2']])/2
+    # reorganize columns according to template file
+    sp.tabs[[sp]] <- sp.tabs[[sp]][col_idx_order]
+  }
+}
+```
+
+```{r IP_tab}
+# Gene.ID	IP.enrich.av.WT	IP.enrich.av.D9A	IP.enrich.av.R16A	IP.enrich.av.Y25D	IP.enrich.av.K31A
+ip.tab <- sp.tabs[[1]]['Geneid']
+for (sp in unique(spt[['group']])) {
+  if ('IP enrich average' %in% names(sp.tabs[[sp]] )) {
+    ip.tab <- merge(ip.tab,
+                  sp.tabs[[sp]][c('Geneid', 'IP enrich average')] %>% 
+                    rename_with(~paste0(., '_', sp), -Geneid),
+                  by='Geneid')
+  }
+}
+```
+
+
+```{r excel2}
+tabs.names <- list('chimera' = 'RILseq_all_chimeras',
+                   'single' = 'RILseq_singles',
+                   'bulkRNAseq' = 'Total_RNAseq')
+
+# save the results in excel file
+exported_excel2 <- function(raw.counts, sp.tabs, ip.tab, file='Summary_interactions_with_IP.xlsx'){
+  wb <- openxlsx::createWorkbook()
+
+  # add the raw and normalized counts
+  for (gp in names(raw.counts)) {
+    openxlsx::addWorksheet(wb, tabs.names[[gp]])
+    openxlsx::writeData(wb, tabs.names[[gp]], x=raw.counts[[gp]], withFilter=FALSE)
+  }
+
+  # add the IP results
+  openxlsx::addWorksheet(wb, 'IP_only')
+  openxlsx::writeData(wb, 'IP_only', x=ip.tab, withFilter=FALSE)
+
+  # add individual sample group tabs
+  for (sp in names(sp.tabs)) {
+    openxlsx::addWorksheet(wb, sp)
+    openxlsx::writeData(wb, sp, x=sp.tabs[[sp]], withFilter=FALSE)
+  }
+
+  openxlsx::saveWorkbook(wb, file=file, overwrite=TRUE)
+}
+
+exported_excel2(raw.counts, sp.tabs, ip.tab,
+                file=paste0('Summary_interactions_with_IP_', subgroup_i, '.xlsx'))
+```
+
