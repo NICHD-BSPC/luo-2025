@@ -1,0 +1,561 @@
+---
+title: Differential expression analysis
+output:
+    html_document:
+        code_folding: hide
+        toc: true
+        toc_float: true
+        toc_depth: 3
+params:
+  featurecounts_fn: False
+  sampletable: False
+  mappings: False
+  gtf: False
+---
+
+```{r global_options, include=FALSE}
+# here we use a modified annotation where all features are quantified
+featurecounts_fn <- params$featurecounts_fn
+# Sets up global options for rendering RMarkdown into HTML.
+knitr::opts_chunk$set(
+    warning=FALSE,
+    message=FALSE,
+    cache.extra_file_dep_1 = file.info(params$sampletable)$mtime,
+    cache.extra_file_dep_2 = file.info(featurecounts_fn)$mtime,
+    cache.extra_file_dep_3 = file.info(params$mappings)$mtime
+)
+```
+
+```{r lcdbwf, results='hide'}
+# Load the lcdbwf R package, which is stored locally.
+# This package has many custom functions used throughout this document.
+devtools::document('../../../lib/lcdbwf')
+devtools::load_all('../../../lib/lcdbwf')
+```
+
+```{r libraries}
+library(AnnotationHub)
+library(BiocParallel)
+library(clusterProfiler)
+library(cowplot)
+library(DESeq2)
+library(dplyr)
+library(DT)
+library(genefilter)
+library(ggplot2)
+library(gridExtra)
+library(plotly)
+library(purrr)
+library(readr)
+library(reshape)
+library(tibble)
+library(tximport)
+library(UpSetR)
+```
+
+```{r config}
+
+# HOW TO CONFIGURE ------------------------------------------------------
+# Any chunks below that depend on config options should be cached and use one
+# or more sections of the config object as arbitrary additional chunk options.
+# By convention, we use the argument name "config" although there is nothing
+# special about this name e.g.,
+#
+#      {r, cache=TRUE, config=config$annotation}
+#
+# Thereafter, any changes to config options under the "annotation" section will then
+# invalidate that chunk's cache -- along with any other chunks that also have
+# config$annotation included as a chunk option.
+#
+config <- lcdbwf:::load_config('config.yaml')
+
+# To keep this Rmd streamlined, much of the text is stored in a different file,
+# text.yaml, and accessed via the `text` list after it is loaded here.
+text <- yaml::yaml.load_file('text.yaml')
+
+parallel <- config$parallel$parallel
+if (config$parallel$parallel){
+    register(MulticoreParam(config$parallel$cores))
+}
+```
+
+In this analysis, we used a version of the annotation where all features (CDSs, UTRs, IGRs, ASs)
+were quantified by ``featurecounts``, with the parameter `-O` to allow mapping a read to each of its
+overlapping features. This was decided because not allowing a read to be assigned to 2 features would discard
+all reads mapping to the gene and UTR, and because that is matching the behavior of the RILseq pipeline.
+
+In the RILseq pipeline, reads are mapped using the function [count_features](https://github.com/asafpr/RILseq/blob/532c13edfe7350e00e3bd44b08a112faba81de93/bin/count_chimeric_reads_per_gene.py#L62),
+counting a read in a feature as long as the coordinates overlap.
+
+
+# Changelog
+
+**Initial results**
+
+Last run: `r date()`
+
+
+
+```{r coldata_setup}
+# Set up all of the metadata for the samples and experimental design. Use this
+# chunk to modify if needed.
+colData <- read.table(params$sampletable, sep='\t', header=TRUE, stringsAsFactors=FALSE)
+# filter to the samples in the batch
+colData <- colData %>%
+  filter(batch == 'GRIL')
+
+# lcdb-wf requires that the first column of the sampletable contains sample
+# names. Use that to set the rownames.
+rownames(colData) <- colData[,1]
+```
+
+```{r dds_initial, cache=TRUE, config=c(config$main, config$toggle$salmon, config$toggle$kallisto)}
+# Convert featureCounts gene-level counts into DESeq2 object, and run
+# variance-stabiliizing transform.
+dds_initial <- lcdbwf:::make_dds(
+  list(sampletable=colData, design=~1, subset_counts=TRUE),
+  config=config,
+  featureCounts=featurecounts_fn,
+  parallel=config$parallel$parallel
+)
+vsd <- varianceStabilizingTransformation(dds_initial, blind=TRUE)
+```
+
+# Experiment overview
+
+Here is the sample table with metadata used for this analysis:
+
+```{r print_coldata}
+exclude.for.printing <- c('featurecounts.path', 'salmon.path', 'kallisto.path',
+                          'orig_filename', 'orig_filename_R2', 'layout',
+                          'sizeFactor')
+colData(dds_initial) %>%
+    as.data.frame() %>%
+    dplyr::select(-contains(exclude.for.printing)) %>%
+    datatable()
+```
+
+
+# Sample similarity and QC
+
+## Clustered heatmap
+
+```{r sample_heatmap, results='asis', cache=TRUE, config=c(text$qc$clustered_heatmap, config$plotting$covariates_for_plots), dependson='dds_initial'}
+# Plot a clustered heatmap of sample distances, for QC.
+lcdbwf:::mdcat(text$qc$clustered_heatmap)
+lcdbwf:::plot_heatmap(vsd, colData, cols_for_grouping=config$plotting$covariates_for_plots)
+```
+
+## PCA {.tabset}
+
+```{r pca, results='asis', cache=TRUE, config=c(text$qc$pca, config$plotting$covariates_for_plots), dependson='dds_initial'}
+dir.create('results', showWarnings = FALSE)
+# Plot PCA plots, optionally tabbed with different factors colored, for QC.
+lcdbwf:::mdcat(text$qc$pca)
+
+# want custom colors
+cols_i <- list(
+  'Hfq_ctrlplasmid_totalRNA' = '#000000',
+  'Hfq_t4rnl1_totalRNA' = '#000000',
+  'R16A_ctrlplasmid_totalRNA' = '#CC88f8',
+  'R16A_t4rnl1_totalRNA' = '#CC88f8'
+)
+
+group <- 'group'
+lcdbwf:::mdcat('### ', paste(group, sep=", "))
+
+vsd_pca <- vsd
+vsd_pca@colData[[group]] <- stringr::str_replace(vsd_pca@colData[[group]], '-', '_')
+
+# subset to the IP samples, for manuscript figure
+vsd_pca <- vsd_pca[ , vsd_pca$group %in% names(cols_i) ]
+
+p <- lcdbwf:::plotPCA.ly(vsd_pca, intgroup=group) +
+        scale_color_manual(labels= names(cols_i), values=cols_i)
+print(htmltools::tagList(ggplotly(p)))
+fn <- paste0('results/PCA_by_', group, '.pdf')
+ggsave(fn, plot=p)
+cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
+
+
+for(group in config$plotting$covariates_for_plots){
+    lcdbwf:::mdcat('### ', paste(group, sep=", "))
+
+    # the '-' in the group names is preventing setting the colors. Need to change them first
+    vsd_pca <- vsd
+    vsd_pca@colData[[group]] <- stringr::str_replace(vsd_pca@colData[[group]], '-', '_')
+
+    p <- lcdbwf:::plotPCA.ly(vsd_pca, intgroup=group) 
+    print(htmltools::tagList(ggplotly(p)))
+}
+```
+
+## rRNA depletion {.tabset}
+
+These samples were depleted for rRNA sequences using DASH. The plot below compares the
+remaining fraction of rRNA sequences, based on SILVA's [LSURef database](https://www.arb-silva.de/fileadmin/silva_databases/release_128/Exports/SILVA_128_LSURef_tax_silva_trunc.fasta.gz) and
+[SSURed_Nr99 database](https://www.arb-silva.de/fileadmin/silva_databases/release_128/Exports/SILVA_128_SSURef_Nr99_tax_silva_trunc.fasta.gz), in these samples and AX12-20231218 Total RNA samples. AX12 samples were rRNA depleted
+using Ribozero.
+
+
+```{r rRNA, results='asis'}
+dash.rrnas <- read.csv('../data/rnaseq_aggregation/multiqc_data/multiqc_rrna_percentages_table_table.txt', sep='\t')
+dash.rrnas <- dash.rrnas %>%
+  mutate(Depletion_method = ifelse(Sample %in% rownames(colData), 'DASH', 'ribozero'))
+
+df <- dash.rrnas %>%
+  mutate(Condition = stringr::str_replace(Sample, '_1|_2', ''),
+         Sample_type = ifelse(grepl('anti', Sample), 'IP', 'TotalRNA'),
+         Depletion_method_by_sample_type = paste0(Depletion_method, '_', Sample_type)
+    ) %>%
+  filter(Condition != 'delHfq_ctrlplasmid_totalRNA')
+
+df.totalonly <- df %>%
+  # only want the total RNA, no IP
+  filter(grepl('noIP|totalRNA', Sample)) 
+
+cat('\n\n### total RNA samples\n\n')
+ggplot(df.totalonly, aes(x=Depletion_method, y=rRNA_percentage)) +
+  geom_boxplot() +
+  geom_jitter(height = 0, width = 0.1, aes(color=Condition)) +
+  theme_classic() +
+  ylim(c(0, max(df[['rRNA_percentage']])))
+fn <- 'results/rRNA_depletion_totalRNA.pdf'
+ggsave(fn)
+cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
+
+cat('\n\n### All samples\n\n')
+ggplot(df, aes(x=Depletion_method_by_sample_type, y=rRNA_percentage)) +
+  geom_boxplot() +
+  geom_jitter(height = 0, width = 0.1, aes(color=Condition)) +
+  theme_classic()
+fn <- 'results/rRNA_depletion_allsamples.pdf'
+ggsave(fn)
+cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
+
+```
+
+
+```{r sizefactors, results='asis', eval=!(config$toggle$salmon | config$toggle$kallisto)}
+# Note that when loading Salmon or Kallisto, DESeq2 does not calculate size
+# factors.
+
+lcdbwf:::mdcat(text$sizefactors)
+lcdbwf:::mdcat("### Size factors")
+p <- lcdbwf:::sizefactors_barplot(dds_initial)
+ggplotly(p)
+
+lcdbwf:::mdcat("### Size factors vs total read count")
+p <- lcdbwf:::sizefactors_vs_total(dds_initial)
+ggplotly(p)
+```
+
+```{r dds_list, cache=TRUE, config=config$main}
+# Create a list of dds objects used as the basis for differential expression.
+#
+# May need substantial editing.
+lst <- list(
+            'main'=list(
+                sampletable=colData,
+                design=~group + 0,   # + 0 for the interaction formula
+                subset_counts=TRUE
+            )
+          )
+dds_list <- map(lst, lcdbwf:::make_dds, config=config,
+  parallel=config$parallel$parallel, featureCounts=featurecounts_fn)
+
+# GTF has Ecocyc gene IDs, that are not in the orgDb,
+# need to use the gene_name, but featurecounts did not recognize it
+ref <- read.csv(params$mappings,
+                sep='\t',
+                header=TRUE)
+
+# there is a duplicated gene_id, fix this
+# gene_id      gene_name    X__featuretype__
+# EG10642      narK         exon
+# EG10642      narS         exon
+# G0-10699.AS  sdsN.AS      AS
+# G0-10699     sdsN         sRNA
+# G0-10699     G0-10699     other-ncRNA
+# G0-10699.AS  G0-10699.AS  AS
+
+ref[ref$gene_name == 'narS', 'gene_id'] <- 'EG10642-2'
+ref[ref$gene_name == 'G0-10699', 'gene_id'] <- 'G0-106992-2'
+ref[ref$gene_name == 'G0-10699.AS', 'gene_id'] <- 'G0-106992.AS-2'
+
+# some don't have gene_name, replace it with the gene_id
+ref <- ref %>%
+    mutate(gene_name = ifelse(gene_name == ' ', gene_id, gene_name))
+rownames(ref) <- ref[['gene_id']]
+
+# replace the Ecocyc gene_ids with gene_names that are compatible with OrgDb
+dds_list <- lapply(dds_list, function(dds_i) {
+                        ids <- rownames(dds_i)
+                        newids <- ref[ids, 'gene_name']
+                        rownames(dds_i) <- newids
+                        return(dds_i)
+                })
+
+# that caused some AS that had common_nameID and geneID under the same common name to be duplicated
+# they have the same counts, keep only 1st
+dds_list <- lapply(dds_list, function(dds_i) {
+                        ids <- rownames(dds_i)
+                        dups <- duplicated(ids)
+                        return(dds_i[!dups,])
+                })
+```
+
+
+```{r dds_diagnostics, results='asis', cache=TRUE, dependson='dds_list', config=config$toggle$dds_diagnostics}
+if (config$toggle$dds_diagnostics){ lcdbwf:::dds_diagnostics(dds_list, text) }
+```
+
+# Differential expression {.tabset}
+
+Now we perform differential expression analysis for the contrasts listed in the
+table below.
+
+Each condition group is represented by the original sample number of the first replicate
+indicated in the [Experiment overview]. The first table below summarizes the pairing condition group 
+to number.
+
+Inspection of the DE genes in the
+[CARNATION interactive app](***REMOVED***) might help
+understand the biological meaning of each contrast.
+
+Under the tables are tabs, one for each contrast. Under each contrast's tab,
+there are more tabs for the various output.
+
+```{r keytable, results='asis'}
+key_df <- colData %>%
+  dplyr::select(samplename, group, original_samplenumber)
+
+knitr::kable(key_df, row.names=FALSE)
+```
+
+
+```{r results_01, dependson='dds_list', cache=TRUE}
+# Perform differential expression testing.
+#
+# ------------------------------------------------------------------------------
+# To take advantage of caching:
+#   - create each list in a different chunk
+#   - ensure chunk name starts with "results_"
+#   - ensure list name starts with "contr_[index]_". The rest of the name will be used
+#     as a readable label for each constrast. [index] is an alphanumeric string 
+#     (ex: contr_01_* or contr_2b_*) that will be used to sort contrasts for output files.
+#     The index string must contain at least 1 character and cannot contain "_"
+#
+# This will need substantial editing.
+#
+# See ?make_results for details.
+# ------------------------------------------------------------------------------
+
+
+contr_01_R16A_vs_WT_t4rnl1 <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast=c("group", "R16A_t4rnl1_totalRNA", "Hfq_t4rnl1_totalRNA"),
+  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
+  label="R16A_t4rnl1 vs. WT Hfq_t4rnl1"
+)
+```
+
+```{r results_02, dependson='dds_list', cache=TRUE}
+contr_02_R16A_vs_WT_ctrlplasmid <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast=c("group", "R16A_ctrlplasmid_totalRNA", "Hfq_ctrlplasmid_totalRNA"),
+  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
+  label="R16A_ctrlplasmid vs. WT Hfq_ctrlplasmid"
+)
+```
+
+
+```{r results_03, dependson='dds_list', cache=TRUE}
+contr_03_R16A_t4rnl1_vs_ctrlplasmid <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast=c("group", "R16A_t4rnl1_totalRNA", "R16A_ctrlplasmid_totalRNA"),
+  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
+  label="R16A t4rnl1 vs. ctrlplasmid"
+)
+```
+
+
+```{r results_04, dependson='dds_list', cache=TRUE}
+contr_04_Hfq_t4rnl1_vs_ctrlplasmid <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast=c("group", "Hfq_t4rnl1_totalRNA", "Hfq_ctrlplasmid_totalRNA"),
+  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
+  label="Hfq t4rnl1 vs. ctrlplasmid"
+)
+```
+
+
+```{r results_05, dependson='dds_list', cache=TRUE}
+coef1 <- lcdbwf:::dds_coefs('main', group=='Hfq_ctrlplasmid_totalRNA')
+coef2 <- lcdbwf:::dds_coefs('main', group=='Hfq_t4rnl1_totalRNA')
+coef3 <- lcdbwf:::dds_coefs('main', group=='R16A_ctrlplasmid_totalRNA')
+coef4 <- lcdbwf:::dds_coefs('main', group=='R16A_t4rnl1_totalRNA')
+
+contr_05_R16A_vs_WT_plasmidinteraction <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast= (coef4 - coef3) - (coef2 - coef1),
+  type="ashr",
+  label="R16A vs. WT Hfq, interaction to take into account effect of control plasmid"
+)
+```
+
+
+
+
+```{r results_06, dependson='dds_list', cache=TRUE, eval=FALSE}
+contr_06_delHfq_vs_WT_t4rnl1 <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast=c("group", "delHfq_t4rnl1_totalRNA", "Hfq_t4rnl1_totalRNA"),
+  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
+  label="delHfq_t4rnl1 vs. WT Hfq_t4rnl1"
+)
+```
+
+```{r results_07, dependson='dds_list', cache=TRUE, eval=FALSE}
+contr_07_delHfq_vs_WT_ctrlplasmid <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast=c("group", "delHfq_ctrlplasmid_totalRNA", "Hfq_ctrlplasmid_totalRNA"),
+  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
+  label="delHfq_ctrlplasmid vs. WT Hfq_ctrlplasmid"
+)
+```
+
+
+```{r results_08, dependson='dds_list', cache=TRUE, eval=FALSE}
+contr_08_delHfq_t4rnl1_vs_ctrlplasmid <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast=c("group", "delHfq_t4rnl1_totalRNA", "delHfq_ctrlplasmid_totalRNA"),
+  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
+  label="delHfq t4rnl1 vs. ctrlplasmid"
+)
+```
+
+
+```{r results_09, dependson='dds_list', cache=TRUE, eval=FALSE}
+coef1 <- lcdbwf:::dds_coefs('main', group=='Hfq_ctrlplasmid_totalRNA')
+coef2 <- lcdbwf:::dds_coefs('main', group=='Hfq_t4rnl1_totalRNA')
+coef3 <- lcdbwf:::dds_coefs('main', group=='delHfq_ctrlplasmid_totalRNA')
+coef4 <- lcdbwf:::dds_coefs('main', group=='delHfq_t4rnl1_totalRNA')
+
+contr_09_delHfq_vs_WT_plasmidinteraction <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast= (coef4 - coef3) - (coef2 - coef1),
+  type="ashr",
+  label="delHfq vs. WT Hfq, interaction to take into account effect of control plasmid"
+)
+```
+
+
+
+
+
+
+
+
+
+
+```{r assemble_variables, cache=TRUE, config=config$annotation, dependson=knitr::all_labels()[grepl("^results_", knitr::all_labels())]}
+res_list <- lcdbwf:::collect_objects("^contr_[^_]+_")
+
+res_list <- lcdbwf:::attach_extra(res_list, config, use_orgdb=TRUE)
+```
+
+```{r summary, results='asis'}
+lcdbwf:::folded_markdown(text$results_table, "Help for table")
+lcdbwf:::summarize_res_list(res_list) %>% datatable
+```
+
+```{r reportresults, results='asis', config=c(text$results_plots, config$toggle$results_diagnostics, config$plotting$diagnostics_results_names), dependson='assemble_variables', cache=TRUE}
+# Create nested tabs showing the results.
+# First level of tabs will be labels of results; second level will be different
+# output (MA plot, volcano plot, etc)
+lcdbwf:::build_results_tabs(res_list, dds_list, config, text)
+```
+
+```{r upsetplots, results='asis', eval=length(res_list)>1, config=config$annotation, dependson='selections'}
+# Compare overlap across multiple differential expression contrasts.
+lcdbwf:::mdcat(text$upset_plots)
+lcdbwf:::plot_upsets(res_list, label_column=config$annotation$label_column)
+```
+
+# Exported results
+
+```{r excel, results='asis'}
+lcdbwf:::exported_excel(res_list, dds_list, file='results/consolidated_results.xlsx')
+```
+
+Here is a TSV file that can be opened in Excel, following the same format than the RILseq output files. It
+also contains per sample the raw and normalized counts, and per contrast the LFC and p-adjusted (FDR) values:
+
+[results/reformated_results.tsv](results/reformated_results.tsv)
+
+
+
+```{r rilseq_formated}
+# Want to match the RILseq excel output files. Need the columns then sort by position:
+rilcols <- c('Geneid', 'Chr', 'Start', 'End', 'Strand', 'Length', 'Type')
+
+# raw and normalized counts
+df_raw <- counts(dds_list[['main']])
+colnames(df_raw) <- paste0('raw_counts_', colnames(df_raw))
+df_norm <- counts(dds_list[['main']], normalized=TRUE)
+colnames(df_norm) <- paste0('normalized_counts_', colnames(df_norm))
+df_cnts <- cbind(df_raw, df_norm) %>%
+  as.data.frame() %>%
+  rownames_to_column('Geneid')
+
+# get genes meta
+gtf_ref <- read.csv(params$gtf,
+                sep='\t', header=FALSE)
+names(gtf_ref) <- c('Chr', 'source', 'Type', 'Start', 'End', 'score', 'Strand', 'na', 'description')
+gtf_ref[['Geneid']] <- lapply(gtf_ref[['description']], function(x) {
+                               gsub(' gene_name ', '', strsplit(x, ';')[[1]][[2]])
+                               }) %>% unlist()
+# remove duplicate gene names
+gtf_ref <- gtf_ref[!duplicated(gtf_ref[['Geneid']]),]
+gtf_ref[['Length']] <- gtf_ref[['End']] - gtf_ref[['Start']]
+
+# add gene meta
+df <- merge(gtf_ref[rilcols], df_cnts, by='Geneid') %>%
+  arrange(Start, End)
+
+# add LFCs and padjs
+for (nm in names(res_list)) {
+  df <- merge(df,
+    as.data.frame(res_list[[nm]][['res']][c('gene', 'log2FoldChange', 'padj')]),
+    by.x='Geneid', by.y='gene', sort=FALSE, all.y=TRUE) %>%
+    rename_at(vars(c('log2FoldChange', 'padj')), ~ paste0(c('log2FoldChange', 'padj'), '_', nm))
+}
+ write.table(df, file='results/reformated_results.tsv', row.names=FALSE, sep='\t', quote=FALSE)
+```
+
+Here is a single Excel file with one worksheet for each contrast: [results/consolidated_results.xlsx](results/consolidated_results.xlsx)
+
+Alternatively, the files below are TSVs that can be opened in Excel or used
+progammatically with downstream tools:
+
+```{r write_output, results='asis'}
+# Write out files for full and each selection, and create a link to them in the
+# HTML generated by this RMarkdown.
+tbl <- lcdbwf:::exported_tsvs(res_list)
+knitr::kable(tbl, row.names=FALSE)
+```
+
+```{r combined_rds, cache=TRUE, dependson='assemble_variables'}
+obj <- lcdbwf:::compose_results(res_list, dds_list)
+saveRDS(obj, file='combined.Rds')
+```
+
+
+# Session info
+For reproducibility purposes, here is the output of `sessionInfo()` showing the
+versions of all packages used here.
+
+```{r sessioninfo}
+sessionInfo()
+```
