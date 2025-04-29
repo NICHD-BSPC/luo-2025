@@ -539,7 +539,8 @@ sample_match <- function(x) {
   # cover all corner-cases of samplenames
   stringr::str_replace(x, '-antiHfq', '_totalRNA_noIP') %>%
     stringr::str_replace('antiHfq', 'totalRNA_noIP') %>%
-    stringr::str_replace('antiFLAG', 'totalRNA_noIP')
+    stringr::str_replace('antiFLAG', 'totalRNA_noIP') %>%
+    stringr::str_replace('_input', '')
 }
 
 #  list('R16A_antiHfq_1'=' R16A_totalRNA_noIP_1',
