@@ -186,31 +186,3 @@ found in `workflows/rilseq/downstream-{subset}/summary-unified.html` and
 `workflows/rilseq/downstream-{subset}/Summary_RILSeq_S-chimeras_unified_{subset}.xlsx`. 
 
 
-
-## Summary of workflows used to generate figures and tables
-
-
-- Figure 1: workflows/rilseq/downstream-FMD
-- Figure 2: workflows/rilseq/downstream-FMD
-- Figure 3: workflows/rilseq/downstream-FMD
-- Figure 4: workflows/rilseq/downstream-AX
-- Figure 5: workflows/rnaseq/ripseq-downstream-AX12 / workflows/rnaseq/rnaseq-downstream-AX
-- Figure 6: workflows/rilseq/downstream-allIPsamples
-- Figure S2: workflows/rnaseq/rnaseq-downstream-FMD
-- Figure S3: workflows/rilseq/downstream-FMD
-- Figure S4: workflows/rnaseq/rnaseq-downstream-FMD
-- Figure S5: workflows/rnaseq/rnaseq-downstream-AX
-- Figure S6: workflows/rnaseq/rnaseq-downstream-AX
-- Figure S8: workflows/rnaseq/rnaseq-downstream-AX
-- Figure S10: workflows/rnaseq/ripseq-downstream-GRIL / workflows/rilseq/downstream-totalRNAsamples
-- Figure S11: workflows/rnaseq/ripseq-downstream-GRIL
-- Table S3: workflows/rnaseq/rnaseq-downstream-FMD
-- Table S4: workflwos/rilseq/downstream-FMD
-- Table S5: workflows/rilseq/downstream-FMD
-- Table S6: workflows/rilseq/downstream-AX
-- Table S7: workflows/rnaseq/ripseq-downstream-AX
-- Table S8: workflows/rnaseq/rnaseq-downstream-AX
-- Table S9: workflows/rilseq/downstream-totalRNAsamples
-- Table S10: workflows/rilseq/downstream-allIPsamples
-- Table S12: workflows/rnaseq/ripseq-downstream-GRIL
-
