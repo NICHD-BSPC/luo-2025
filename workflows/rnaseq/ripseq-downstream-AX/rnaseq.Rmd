@@ -79,13 +79,23 @@ if (config$parallel$parallel){
 }
 ```
 
-In this analysis, we used a version of the annotation where all features (CDSs, UTRs, IGRs, ASs)
-were quantified by ``featurecounts``, with the parameter `-O` to allow mapping a read to each of its
-overlapping features. This was decided because not allowing a read to be assigned to 2 features would discard
-all reads mapping to the gene and UTR, and because that is matching the behavior of the RILseq pipeline.
+In this analysis, we processed the RILseq samples as if they were IP samples of a RILseq
+experiment. Starting from the FASTQs, the reads were trimmed for adapters, aligned to the
+reference genome, and reads in all features (ORF, UTR, AS and IGR) were quantified with
+``featurecounts`` with the parameter ``-O`` to allow counting a read in either features if
+it overlaps 2 features (i.e. UTR and ORF).
 
-In the RILseq pipeline, reads are mapped using the function [count_features](https://github.com/asafpr/RILseq/blob/532c13edfe7350e00e3bd44b08a112faba81de93/bin/count_chimeric_reads_per_gene.py#L62),
-counting a read in a feature as long as the coordinates overlap.
+No_IP samples from the experiment rnaseq-AX12-20231218 were processed the same way and used as
+input.
+
+In RIPseq, differential expression would be then performed on IP / input; here we include IP / input
+contrasts as well as other RIL samples comparisons and interaction contrasts (mutant enrichment /
+WT enrichment).
+
+The goal is to determine from those results, together with RILseq chimera+single differential
+expression comparison, whether the low number of chimeras in the Hfq mutant R16A is due to a
+discrupted binding or differences in expression.
+
 
 
 # Changelog
@@ -102,7 +112,8 @@ Last run: `r date()`
 colData <- read.table(params$sampletable, sep='\t', header=TRUE, stringsAsFactors=FALSE)
 # filter to the samples in the batch
 colData <- colData %>%
-  filter(batch == 'GRIL')
+  filter(batch == 'AX') %>%
+  filter(RIPseq_workflow == 'yes')
 
 # lcdb-wf requires that the first column of the sampletable contains sample
 # names. Use that to set the rownames.
@@ -152,89 +163,12 @@ lcdbwf:::plot_heatmap(vsd, colData, cols_for_grouping=config$plotting$covariates
 dir.create('results', showWarnings = FALSE)
 # Plot PCA plots, optionally tabbed with different factors colored, for QC.
 lcdbwf:::mdcat(text$qc$pca)
-
-# want custom colors
-cols_i <- list(
-  'Hfq_ctrlplasmid_totalRNA' = '#000000',
-  'Hfq_t4rnl1_totalRNA' = '#000000',
-  'R16A_ctrlplasmid_totalRNA' = '#CC88f8',
-  'R16A_t4rnl1_totalRNA' = '#CC88f8'
-)
-
-group <- 'group'
-lcdbwf:::mdcat('### ', paste(group, sep=", "))
-
-vsd_pca <- vsd
-vsd_pca@colData[[group]] <- stringr::str_replace(vsd_pca@colData[[group]], '-', '_')
-
-# subset to the IP samples, for manuscript figure
-vsd_pca <- vsd_pca[ , vsd_pca$group %in% names(cols_i) ]
-
-p <- lcdbwf:::plotPCA.ly(vsd_pca, intgroup=group) +
-        scale_color_manual(labels= names(cols_i), values=cols_i)
-print(htmltools::tagList(ggplotly(p)))
-fn <- paste0('results/PCA_by_', group, '.pdf')
-ggsave(fn, plot=p)
-cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
-
-
 for(group in config$plotting$covariates_for_plots){
     lcdbwf:::mdcat('### ', paste(group, sep=", "))
-
-    # the '-' in the group names is preventing setting the colors. Need to change them first
-    vsd_pca <- vsd
-    vsd_pca@colData[[group]] <- stringr::str_replace(vsd_pca@colData[[group]], '-', '_')
-
-    p <- lcdbwf:::plotPCA.ly(vsd_pca, intgroup=group) 
+    p <- lcdbwf:::plotPCA.ly(vsd, intgroup=group)
     print(htmltools::tagList(ggplotly(p)))
 }
 ```
-
-## rRNA depletion {.tabset}
-
-These samples were depleted for rRNA sequences using DASH. The plot below compares the
-remaining fraction of rRNA sequences, based on SILVA's [LSURef database](https://www.arb-silva.de/fileadmin/silva_databases/release_128/Exports/SILVA_128_LSURef_tax_silva_trunc.fasta.gz) and
-[SSURed_Nr99 database](https://www.arb-silva.de/fileadmin/silva_databases/release_128/Exports/SILVA_128_SSURef_Nr99_tax_silva_trunc.fasta.gz), in these samples and AX12-20231218 Total RNA samples. AX12 samples were rRNA depleted
-using Ribozero.
-
-
-```{r rRNA, results='asis'}
-dash.rrnas <- read.csv('../data/rnaseq_aggregation/multiqc_data/multiqc_rrna_percentages_table_table.txt', sep='\t')
-dash.rrnas <- dash.rrnas %>%
-  mutate(Depletion_method = ifelse(Sample %in% rownames(colData), 'DASH', 'ribozero'))
-
-df <- dash.rrnas %>%
-  mutate(Condition = stringr::str_replace(Sample, '_1|_2', ''),
-         Sample_type = ifelse(grepl('anti', Sample), 'IP', 'TotalRNA'),
-         Depletion_method_by_sample_type = paste0(Depletion_method, '_', Sample_type)
-    ) %>%
-  filter(Condition != 'delHfq_ctrlplasmid_totalRNA')
-
-df.totalonly <- df %>%
-  # only want the total RNA, no IP
-  filter(grepl('noIP|totalRNA', Sample)) 
-
-cat('\n\n### total RNA samples\n\n')
-ggplot(df.totalonly, aes(x=Depletion_method, y=rRNA_percentage)) +
-  geom_boxplot() +
-  geom_jitter(height = 0, width = 0.1, aes(color=Condition)) +
-  theme_classic() +
-  ylim(c(0, max(df[['rRNA_percentage']])))
-fn <- 'results/rRNA_depletion_totalRNA.pdf'
-ggsave(fn)
-cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
-
-cat('\n\n### All samples\n\n')
-ggplot(df, aes(x=Depletion_method_by_sample_type, y=rRNA_percentage)) +
-  geom_boxplot() +
-  geom_jitter(height = 0, width = 0.1, aes(color=Condition)) +
-  theme_classic()
-fn <- 'results/rRNA_depletion_allsamples.pdf'
-ggsave(fn)
-cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
-
-```
-
 
 ```{r sizefactors, results='asis', eval=!(config$toggle$salmon | config$toggle$kallisto)}
 # Note that when loading Salmon or Kallisto, DESeq2 does not calculate size
@@ -255,14 +189,13 @@ ggplotly(p)
 #
 # May need substantial editing.
 lst <- list(
-            'main'=list(
+            main=list(
                 sampletable=colData,
-                design=~group + 0,   # + 0 for the interaction formula
-                subset_counts=TRUE
-            )
-          )
-dds_list <- map(lst, lcdbwf:::make_dds, config=config,
-  parallel=config$parallel$parallel, featureCounts=featurecounts_fn)
+                design=~group,
+		subset_counts=TRUE)
+)
+dds_list <- map(lst, lcdbwf:::make_dds,
+    config=config, parallel=config$parallel$parallel, featureCounts=featurecounts_fn)
 
 # GTF has Ecocyc gene IDs, that are not in the orgDb,
 # need to use the gene_name, but featurecounts did not recognize it
@@ -319,150 +252,183 @@ Each condition group is represented by the original sample number of the first r
 indicated in the [Experiment overview]. The first table below summarizes the pairing condition group 
 to number.
 
+In thee contrasts IP vs. input, the ``up`` features are those enriched during IP. ``down`` features
+are hard to interpret and might not be biologically meaningful.
+
+
+**A note about the IP vs. IP contrasts**: the contrasts
+``18 vs 17: R16A_antiHfq vs. Hfq_antiHfq`` and
+``20 vs 19: R16A-FLAG_antiHfq vs. Hfq-FLAG-antiHfq`` are expected to return genes whose capture is
+affected by the mutation, but can also return genes whose expression was affected by the mutation. Thus we
+recommend to look at the interaction contrasts ``(18 vs 2) vs (17 vs 1): R16A_vs_WT_RILenrich`` and
+``(20 vs 4) vs (19 vs 3): R16Aflag_vs_WTflag_RILenrich`` to take into account eventual expression
+changes.
+
 Inspection of the DE genes in the
 [CARNATION interactive app](***REMOVED***) might help
-understand the biological meaning of each contrast.
+understand the biological meaning of each contrast. This analysis is under the Assay
+``RILseq-AX12-20231218-as-RIPseq``.
 
 Under the tables are tabs, one for each contrast. Under each contrast's tab,
 there are more tabs for the various output.
 
+
 ```{r keytable, results='asis'}
 key_df <- colData %>%
-  dplyr::select(samplename, group, original_samplenumber)
+  filter(grepl('_1', samplename)) %>%
+  dplyr::select(group, original_samplename)
 
 knitr::kable(key_df, row.names=FALSE)
 ```
 
 
 ```{r results_01, dependson='dds_list', cache=TRUE}
-# Perform differential expression testing.
-#
-# ------------------------------------------------------------------------------
-# To take advantage of caching:
-#   - create each list in a different chunk
-#   - ensure chunk name starts with "results_"
-#   - ensure list name starts with "contr_[index]_". The rest of the name will be used
-#     as a readable label for each constrast. [index] is an alphanumeric string 
-#     (ex: contr_01_* or contr_2b_*) that will be used to sort contrasts for output files.
-#     The index string must contain at least 1 character and cannot contain "_"
-#
-# This will need substantial editing.
-#
-# See ?make_results for details.
-# ------------------------------------------------------------------------------
-
-
-contr_01_R16A_vs_WT_t4rnl1 <- lcdbwf:::make_results(
+contr_01_R16A_vs_WT_RIL <- lcdbwf:::make_results(
   dds_name="main",
-  contrast=c("group", "R16A_t4rnl1_totalRNA", "Hfq_t4rnl1_totalRNA"),
-  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
-  label="R16A_t4rnl1 vs. WT Hfq_t4rnl1"
+  contrast=c("group", "R16A_antiHfq", "Hfq_antiHfq"),
+  type="ashr",
+  label="18 vs 17: R16A_antiHfq vs. Hfq_antiHfq"
 )
 ```
 
 ```{r results_02, dependson='dds_list', cache=TRUE}
-contr_02_R16A_vs_WT_ctrlplasmid <- lcdbwf:::make_results(
+contr_02_R16AFlag_vs_WTFlag_RIL <- lcdbwf:::make_results(
   dds_name="main",
-  contrast=c("group", "R16A_ctrlplasmid_totalRNA", "Hfq_ctrlplasmid_totalRNA"),
-  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
-  label="R16A_ctrlplasmid vs. WT Hfq_ctrlplasmid"
+  contrast=c("group", "R16A-FLAG_antiHfq", "Hfq-FLAG-antiHfq"),
+  type="ashr",
+  label="20 vs 19: R16A-FLAG_antiHfq vs. Hfq-FLAG-antiHfq"
 )
 ```
-
 
 ```{r results_03, dependson='dds_list', cache=TRUE}
-contr_03_R16A_t4rnl1_vs_ctrlplasmid <- lcdbwf:::make_results(
+contr_03_R16A_RILenrich <- lcdbwf:::make_results(
   dds_name="main",
-  contrast=c("group", "R16A_t4rnl1_totalRNA", "R16A_ctrlplasmid_totalRNA"),
-  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
-  label="R16A t4rnl1 vs. ctrlplasmid"
+  contrast=c("group", "R16A_antiHfq", "R16A_totalRNA_noIP"),
+  type="ashr",
+  label="18 vs 2: R16A_antiHfq vs. R16A_totalRNA_noIP"
 )
 ```
 
-
 ```{r results_04, dependson='dds_list', cache=TRUE}
-contr_04_Hfq_t4rnl1_vs_ctrlplasmid <- lcdbwf:::make_results(
+contr_04_WT_RILenrich <- lcdbwf:::make_results(
   dds_name="main",
-  contrast=c("group", "Hfq_t4rnl1_totalRNA", "Hfq_ctrlplasmid_totalRNA"),
-  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
-  label="Hfq t4rnl1 vs. ctrlplasmid"
+  contrast=c("group", "Hfq_antiHfq", "Hfq_totalRNA_noIP"),
+  type="ashr",
+  label="17 vs 1: Hfq_antiHfq vs. Hfq_totalRNA_noIP"
 )
 ```
 
 
 ```{r results_05, dependson='dds_list', cache=TRUE}
-coef1 <- lcdbwf:::dds_coefs('main', group=='Hfq_ctrlplasmid_totalRNA')
-coef2 <- lcdbwf:::dds_coefs('main', group=='Hfq_t4rnl1_totalRNA')
-coef3 <- lcdbwf:::dds_coefs('main', group=='R16A_ctrlplasmid_totalRNA')
-coef4 <- lcdbwf:::dds_coefs('main', group=='R16A_t4rnl1_totalRNA')
+# (gp4 vs. gp3) vs. (gp2 vs. gp1)
+gp1 <- lcdbwf:::dds_coefs('main', group=='Hfq_totalRNA_noIP')
+gp2 <- lcdbwf:::dds_coefs('main', group=='Hfq_antiHfq')
+gp3 <- lcdbwf:::dds_coefs('main', group=='R16A_totalRNA_noIP')
+gp4 <- lcdbwf:::dds_coefs('main', group=='R16A_antiHfq')
+contr_05_R16A_vs_WT_RILenrich <- lcdbwf:::make_results(
+  dds_name='main',
+    label='(18 vs 2) vs (17 vs 1): R16A_vs_WT_RILenrich',
+  contrast=(gp4 - gp3) - (gp2 - gp1),
+  type='ashr'
+)
+```
 
-contr_05_R16A_vs_WT_plasmidinteraction <- lcdbwf:::make_results(
+```{r results_06, dependson='dds_list', cache=TRUE}
+contr_06_R16Aflag_RILenrich <- lcdbwf:::make_results(
   dds_name="main",
-  contrast= (coef4 - coef3) - (coef2 - coef1),
+  contrast=c("group", "R16A-FLAG_antiHfq", "R16A-FLAG_totalRNA_noIP"),
   type="ashr",
-  label="R16A vs. WT Hfq, interaction to take into account effect of control plasmid"
+  label="20 vs 4: R16A-FLAG_antiHfq vs. R16A-FLAG_totalRNA_noIP"
+)
+```
+
+```{r results_07, dependson='dds_list', cache=TRUE}
+contr_07_WTflag_RILenrich <- lcdbwf:::make_results(
+  dds_name="main",
+  contrast=c("group", "Hfq-FLAG-antiHfq", "Hfq-FLAG_totalRNA_noIP"),
+  type="ashr",
+  label="19 vs 3: Hfq-FLAG_antiHfq vs. Hfq-FLAG_totalRNA_noIP"
 )
 ```
 
 
-
-
-```{r results_06, dependson='dds_list', cache=TRUE, eval=FALSE}
-contr_06_delHfq_vs_WT_t4rnl1 <- lcdbwf:::make_results(
-  dds_name="main",
-  contrast=c("group", "delHfq_t4rnl1_totalRNA", "Hfq_t4rnl1_totalRNA"),
-  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
-  label="delHfq_t4rnl1 vs. WT Hfq_t4rnl1"
-)
-```
-
-```{r results_07, dependson='dds_list', cache=TRUE, eval=FALSE}
-contr_07_delHfq_vs_WT_ctrlplasmid <- lcdbwf:::make_results(
-  dds_name="main",
-  contrast=c("group", "delHfq_ctrlplasmid_totalRNA", "Hfq_ctrlplasmid_totalRNA"),
-  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
-  label="delHfq_ctrlplasmid vs. WT Hfq_ctrlplasmid"
-)
-```
-
-
-```{r results_08, dependson='dds_list', cache=TRUE, eval=FALSE}
-contr_08_delHfq_t4rnl1_vs_ctrlplasmid <- lcdbwf:::make_results(
-  dds_name="main",
-  contrast=c("group", "delHfq_t4rnl1_totalRNA", "delHfq_ctrlplasmid_totalRNA"),
-  type="ashr",  # using ashr because need ashr for the interaction, and want to keep consistent
-  label="delHfq t4rnl1 vs. ctrlplasmid"
+```{r results_08, dependson='dds_list', cache=TRUE}
+# (gp4 vs. gp3) vs. (gp2 vs. gp1)
+gp1 <- lcdbwf:::dds_coefs('main', group=='Hfq-FLAG_totalRNA_noIP')
+gp2 <- lcdbwf:::dds_coefs('main', group=='Hfq-FLAG-antiHfq')
+gp3 <- lcdbwf:::dds_coefs('main', group=='R16A-FLAG_totalRNA_noIP')
+gp4 <- lcdbwf:::dds_coefs('main', group=='R16A-FLAG_antiHfq')
+contr_08_R16Aflag_vs_WTflag_RILenrich <- lcdbwf:::make_results(
+  dds_name='main',
+    label='(20 vs 4) vs (19 vs 3): R16Aflag_vs_WTflag enrich when Hfq pulldown',
+  contrast=(gp4 - gp3) - (gp2 - gp1),
+  type='ashr'
 )
 ```
 
 
 ```{r results_09, dependson='dds_list', cache=TRUE, eval=FALSE}
-coef1 <- lcdbwf:::dds_coefs('main', group=='Hfq_ctrlplasmid_totalRNA')
-coef2 <- lcdbwf:::dds_coefs('main', group=='Hfq_t4rnl1_totalRNA')
-coef3 <- lcdbwf:::dds_coefs('main', group=='delHfq_ctrlplasmid_totalRNA')
-coef4 <- lcdbwf:::dds_coefs('main', group=='delHfq_t4rnl1_totalRNA')
+# FLAG anti-FLAG were not used in manuscript
+#contr_09_WTflag_FLAGenrich <- lcdbwf:::make_results(
+#  dds_name="main",
+#  contrast=c("group", "Hfq-FLAG_antiFLAG", "Hfq-FLAG_totalRNA_noIP"),
+#  type="ashr",
+#  label="21 vs 3: Hfq-FLAG_antiFLAG vs. Hfq-FLAG_totalRNA_noIP"
+#)
+```
 
-contr_09_delHfq_vs_WT_plasmidinteraction <- lcdbwf:::make_results(
-  dds_name="main",
-  contrast= (coef4 - coef3) - (coef2 - coef1),
-  type="ashr",
-  label="delHfq vs. WT Hfq, interaction to take into account effect of control plasmid"
-)
+```{r results_10, dependson='dds_list', cache=TRUE, eval=FALSE}
+# FLAG anti-FLAG were not used in manuscript
+#contr_10_R16Aflag_FLAGenrich <- lcdbwf:::make_results(
+#  dds_name="main",
+#  contrast=c("group", "R16A-FLAG_antiFLAG", "R16A-FLAG_totalRNA_noIP"),
+#  type="ashr",
+#  label="22 vs 4: R16A-FLAG_antiFLAG vs. R16A-FLAG_totalRNA_noIP"
+#)
 ```
 
 
+```{r results_11, dependson='dds_list', cache=TRUE, eval=FALSE}
+# FLAG anti-FLAG were not used in manuscript
+# (gp4 vs. gp3) vs. (gp2 vs. gp1)
+#gp1 <- lcdbwf:::dds_coefs('main', group=='Hfq-FLAG_totalRNA_noIP')
+#gp2 <- lcdbwf:::dds_coefs('main', group=='Hfq-FLAG_antiFLAG')
+#gp3 <- lcdbwf:::dds_coefs('main', group=='R16A-FLAG_totalRNA_noIP')
+#gp4 <- lcdbwf:::dds_coefs('main', group=='R16A-FLAG_antiFLAG')
+#contr_11_R16Aflag_vs_WTflag_FLAGenrich <- lcdbwf:::make_results(
+#  dds_name='main',
+#    label='(22 vs 4) vs (21 vs 3): R16Aflag_vs_WTflag enrich when FLAG pulldown',
+#  contrast=(gp4 - gp3) - (gp2 - gp1),
+#  type='ashr'
+#)
+```
+
+```{r results_12, dependson='dds_list', cache=TRUE, eval=FALSE}
+# FLAG anti-FLAG were not used in manuscript
+#contr_12_WTflag_antibody_diff <- lcdbwf:::make_results(
+#  dds_name="main",
+#  contrast=c("group", "Hfq-FLAG_antiFLAG", "Hfq-FLAG-antiHfq"),
+#  type="ashr",
+#  label="21 vs 19: Hfq-FLAG_antiFLAG vs. Hfq-FLAG-antiHfq, Is the pull-down antibody changing IP in WTflag"
+#)
+```
 
 
-
-
-
+```{r results_13, dependson='dds_list', cache=TRUE, eval=FALSE}
+# FLAG anti-FLAG were not used in manuscript
+#contr_13_R16Aflag_antibody_diff <- lcdbwf:::make_results(
+#  dds_name="main",
+#  contrast=c("group", "R16A-FLAG_antiFLAG", "R16A-FLAG_antiHfq"),
+#  type="ashr",
+#  label="22 vs 20: R16A-FLAG_antiFLAG vs. R16A-FLAG_antiHfq, Is the pull-down antibody changing IP in R16Aflag"
+#)
+```
 
 
 
 ```{r assemble_variables, cache=TRUE, config=config$annotation, dependson=knitr::all_labels()[grepl("^results_", knitr::all_labels())]}
 res_list <- lcdbwf:::collect_objects("^contr_[^_]+_")
-
-res_list <- lcdbwf:::attach_extra(res_list, config, use_orgdb=TRUE)
+res_list <- lcdbwf:::attach_extra(res_list, config)
 ```
 
 ```{r summary, results='asis'}
@@ -484,10 +450,6 @@ lcdbwf:::plot_upsets(res_list, label_column=config$annotation$label_column)
 ```
 
 # Exported results
-
-```{r excel, results='asis'}
-lcdbwf:::exported_excel(res_list, dds_list, file='results/consolidated_results.xlsx')
-```
 
 Here is a TSV file that can be opened in Excel, following the same format than the RILseq output files. It
 also contains per sample the raw and normalized counts, and per contrast the LFC and p-adjusted (FDR) values:
@@ -532,6 +494,11 @@ for (nm in names(res_list)) {
     rename_at(vars(c('log2FoldChange', 'padj')), ~ paste0(c('log2FoldChange', 'padj'), '_', nm))
 }
  write.table(df, file='results/reformated_results.tsv', row.names=FALSE, sep='\t', quote=FALSE)
+```
+
+
+```{r excel, results='asis'}
+lcdbwf:::exported_excel(res_list, dds_list, file='results/consolidated_results.xlsx')
 ```
 
 Here is a single Excel file with one worksheet for each contrast: [results/consolidated_results.xlsx](results/consolidated_results.xlsx)

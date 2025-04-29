@@ -58,8 +58,6 @@ final_targets = utils.flatten((
     [c.targets['multiqc']],
     utils.flatten(c.targets['featurecounts']),
     utils.flatten(c.targets['markduplicates']),
-    #utils.flatten(c.targets['salmon']),
-    #utils.flatten(c.targets['kallisto']),
     utils.flatten(c.targets['preseq']),
     utils.flatten(c.targets['rseqc']),
     utils.flatten(c.targets['collectrnaseqmetrics']),
@@ -77,8 +75,11 @@ if 'quantify_all_features' in config.keys():
 final_targets.append('../references/references_data/ecoli/default/annotation/ecoli_default.mapping.tsv.gz')
 
 # downstream Rmds
-for batch in set(c.sampletable['batch']):
-    final_targets.append('downstream-' + batch + '/rnaseq.html')
+for batch in set(c.sampletable['batch'][c.sampletable['RNAseq_workflow'] == 'yes']):
+    final_targets.append('rnaseq-downstream-' + batch + '/rnaseq.html')
+for batch in set(c.sampletable['batch'][c.sampletable['RIPseq_workflow'] == 'yes']):
+    final_targets.append('ripseq-downstream-' + batch + '/rnaseq.html')
+
 
 def render_r1_r2(pattern, r1_only=False):
     return expand(pattern, sample='{sample}', n=c.n)
@@ -1179,15 +1180,15 @@ if 'merged_bigwigs' in config:
             wrapper_for('average-bigwigs/wrapper.py')
 
 
-rule downstream_rmarkdown:
+rule rnaseq_downstream_rmarkdown:
     input:
-        rmd='downstream-{batch}/rnaseq.Rmd',
+        rmd='rnaseq-downstream-{batch}/rnaseq.Rmd',
         txt='data/rnaseq_aggregation/featurecounts_all_features_allow_overlap.txt',
         st='config/sampletable.tsv',
         mappings='../references/references_data/ecoli/default/annotation/ecoli_default.mapping.tsv.gz',
         gtf='../references/references_data/ecoli/default/annotation/ecoli_default.gtf',
     output:
-        html='downstream-{batch}/rnaseq.html',
+        html='rnaseq-downstream-{batch}/rnaseq.html',
 #        xlsx='downstream-AX/results/consolidated_results.xlsx',
     conda:
         '../../env-r.yaml'
@@ -1195,7 +1196,7 @@ rule downstream_rmarkdown:
             mem_mb=1024 * 16,
             runtime=autobump(120)
     log:
-        'logs/downstream_{batch}_rmarkdown.log'
+        'logs/rnaseq_downstream_{batch}_rmarkdown.log'
     shell:
         'Rscript -e '
         '''"rmarkdown::render('{input.rmd}', output_file='rnaseq.html', params=list(featurecounts_fn='../{input.txt}', mappings='../{input.mappings}', gtf='../{input.gtf}', sampletable='../{input.st}'))"'''
