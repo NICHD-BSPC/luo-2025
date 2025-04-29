@@ -582,8 +582,8 @@ rule downstream_Rmd:
         sampletable=config['sampletable']
     output:
         html='downstream-{subgroup}/summary.html',
-        xlsx='downstream-{subgroup}/Summary_RILSeq_S-chimeras_{subgroup}.xlsx)',
-        xlsx2='downstream-{subgroup}/Summary_interactions_with_IP_{subgroup}.xlsx)',
+        xlsx='downstream-{subgroup}/Summary_RILSeq_S-chimeras_{subgroup}.xlsx',
+        xlsx2='downstream-{subgroup}/Summary_interactions_with_IP_{subgroup}.xlsx',
     conda:
         '../../env-r.yaml'
     resources:
@@ -607,7 +607,7 @@ rule downstream_unified_Rmd:
         sampletable=config['sampletable']
     output:
         html='downstream-{subgroup}/summary-unified.html',
-        xlsx='downstream-{subgroup}/Summary_RILSeq_S-chimeras_unified_{subgroup}.xlsx)',
+        xlsx='downstream-{subgroup}/Summary_RILSeq_S-chimeras_unified_{subgroup}.xlsx',
     conda:
         '../../env-r.yaml'
     resources:
