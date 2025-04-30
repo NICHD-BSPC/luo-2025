@@ -252,7 +252,7 @@ Each condition group is represented by the original sample number of the first r
 indicated in the [Experiment overview]. The first table below summarizes the pairing condition group 
 to number.
 
-In thee contrasts IP vs. input, the ``up`` features are those enriched during IP. ``down`` features
+In the contrasts IP vs. input, the ``up`` features are those enriched during IP. ``down`` features
 are hard to interpret and might not be biologically meaningful.
 
 
@@ -264,10 +264,6 @@ recommend to look at the interaction contrasts ``(18 vs 2) vs (17 vs 1): R16A_vs
 ``(20 vs 4) vs (19 vs 3): R16Aflag_vs_WTflag_RILenrich`` to take into account eventual expression
 changes.
 
-Inspection of the DE genes in the
-[CARNATION interactive app](***REMOVED***) might help
-understand the biological meaning of each contrast. This analysis is under the Assay
-``RILseq-AX12-20231218-as-RIPseq``.
 
 Under the tables are tabs, one for each contrast. Under each contrast's tab,
 there are more tabs for the various output.
@@ -276,10 +272,11 @@ there are more tabs for the various output.
 ```{r keytable, results='asis'}
 key_df <- colData %>%
   filter(grepl('_1', samplename)) %>%
-  dplyr::select(group, original_samplename)
+  dplyr::select(group, original_samplenumber)
 
 knitr::kable(key_df, row.names=FALSE)
 ```
+
 
 
 ```{r results_01, dependson='dds_list', cache=TRUE}

@@ -104,6 +104,8 @@ discrupted binding or differences in expression.
 
 Last run: `r date()`
 
+
+
 ```{r coldata_setup}
 # Set up all of the metadata for the samples and experimental design. Use this
 # chunk to modify if needed.
@@ -291,9 +293,6 @@ affected by the mutation, but can also return genes whose expression was affecte
 recommend to look at the interaction contrasts ``(R16A t4rrnl1 IP vs totalRNA) vs. (WT t4rnl1 IP vs. totalRNA)`` to take into account eventual expression
 changes.
 
-Inspection of the DE genes in the
-[CARNATION interactive app](***REMOVED***) might help
-understand the biological meaning of each contrast. 
 
 Under the tables are tabs, one for each contrast. Under each contrast's tab,
 there are more tabs for the various output.
@@ -302,7 +301,7 @@ there are more tabs for the various output.
 ```{r keytable, results='asis'}
 key_df <- colData %>%
   filter(grepl('_1', samplename)) %>%
-  dplyr::select(group, original_samplename)
+  dplyr::select(group, original_samplenumber)
 
 knitr::kable(key_df, row.names=FALSE)
 ```
