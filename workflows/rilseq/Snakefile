@@ -61,9 +61,9 @@ rule targets:
                sub = ['single', 'chimera', 'bulkRNAseq']),
         # downstream analysis
         expand('downstream-{subgroup}/summary.html', 
-               subgroup=sampletable["subgroup"].dropna().unique()[1:2]),
+               subgroup=sampletable["subgroup"].dropna().unique()),
         expand('downstream-{subgroup}/summary-unified.html', 
-               subgroup=sampletable["subgroup"].dropna().unique()[1:2]),
+               subgroup=sampletable["subgroup"].dropna().unique()),
 
 
 
