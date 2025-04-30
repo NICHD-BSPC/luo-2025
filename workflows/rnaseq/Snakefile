@@ -1189,7 +1189,6 @@ rule rnaseq_downstream_rmarkdown:
         gtf='../references/references_data/ecoli/default/annotation/ecoli_default.gtf',
     output:
         html='rnaseq-downstream-{batch}/rnaseq.html',
-#        xlsx='downstream-AX/results/consolidated_results.xlsx',
     conda:
         '../../env-r.yaml'
     resources:
@@ -1201,6 +1200,29 @@ rule rnaseq_downstream_rmarkdown:
         'Rscript -e '
         '''"rmarkdown::render('{input.rmd}', output_file='rnaseq.html', params=list(featurecounts_fn='../{input.txt}', mappings='../{input.mappings}', gtf='../{input.gtf}', sampletable='../{input.st}'))"'''
         '> {log} 2>&1'
+
+
+rule ripseq_downstream_rmarkdown:
+    input:
+        rmd='ripseq-downstream-{batch}/rnaseq.Rmd',
+        txt='data/rnaseq_aggregation/featurecounts_all_features_allow_overlap.txt',
+        st='config/sampletable.tsv',
+        mappings='../references/references_data/ecoli/default/annotation/ecoli_default.mapping.tsv.gz',
+        gtf='../references/references_data/ecoli/default/annotation/ecoli_default.gtf',
+    output:
+        html='ripseq-downstream-{batch}/rnaseq.html',
+    conda:
+        '../../env-r.yaml'
+    resources:
+            mem_mb=1024 * 16,
+            runtime=autobump(120)
+    log:
+        'logs/ripseq_downstream_{batch}_rmarkdown.log'
+    shell:
+        'Rscript -e '
+        '''"rmarkdown::render('{input.rmd}', output_file='rnaseq.html', params=list(featurecounts_fn='../{input.txt}', mappings='../{input.mappings}', gtf='../{input.gtf}', sampletable='../{input.st}'))"'''
+        '> {log} 2>&1'
+
 
 
 
