@@ -320,10 +320,6 @@ Each condition group is represented by the original sample number of the first r
 indicated in the [Experiment overview]. The first table below summarizes the pairing condition group 
 to number.
 
-Inspection of the DE genes in the
-[CARNATION interactive app](***REMOVED***) might help
-understand the biological meaning of each contrast.
-
 Under the tables are tabs, one for each contrast. Under each contrast's tab,
 there are more tabs for the various output.
 

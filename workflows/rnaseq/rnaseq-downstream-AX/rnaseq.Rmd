@@ -286,10 +286,6 @@ added the interaction contrasts ``[7vs3] vs [5vs1]: effect of FLAG on IP enrichm
 ``[8vs4] vs [6vs2]: effect of FLAG on IP enrichment in mutant`` to take into account eventual expression
 changes and only return enrichment changes due to the FLAG.
 
-Inspection of the DE genes in the
-[CARNATION interactive app](***REMOVED***) might help
-understand the biological meaning of each contrast.
-
 Under the tables are tabs, one for each contrast. Under each contrast's tab,
 there are more tabs for the various output.
 
