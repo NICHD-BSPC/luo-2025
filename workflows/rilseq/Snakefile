@@ -71,10 +71,6 @@ rule targets:
 # RULES
 # ----------------------------------------------------------------------------
 
-#TO DO:
-#    - NO, add something to fastq-dump to copy over the files if orig_filename
-#    - look for rules that save by batch (i.e. featurecounts) and fix them
-#    - [x] add the RNAseq_input_samples in the sampletable, for the bulk rnaseq featurecounts (is_total_RNA column)
 
 if 'Run' in sampletable.columns:
     rule fastq_dump:
@@ -183,7 +179,6 @@ rule cutadapt:
                 "-a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA "
                 "-A AGATCGGAAGAGCGTCGTGTAGGGAAAGAGTGT "
                 "--nextseq-trim 20 "
-                #"--overlap 6 "
                 '-j {threads} '
                 '--minimum-length 25 '
                 "{input.r1} "
@@ -196,7 +191,6 @@ rule cutadapt:
                 "-o {output[0]} "
                 "-a AGATCGGAAGAGCACACGTCTGAACTCCAGTCA "
                 "--nextseq-trim 20 "
-                #"--overlap 6 "
                 '-j {threads} '
                 '--minimum-length 25 '
                 "{input.r1} "

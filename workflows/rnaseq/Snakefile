@@ -799,7 +799,6 @@ rule multiqc:
             utils.flatten(c.targets['cutadapt']) +
             utils.flatten(c.targets['featurecounts']) +
             utils.flatten(c.targets['markduplicates']) +
-            #utils.flatten(c.targets['salmon']) +
             utils.flatten(c.targets['rseqc']) +
             utils.flatten(c.targets['fastq_screen']) +
             utils.flatten(c.targets['preseq']) +
