@@ -32,7 +32,7 @@ The pipelines are broken down into sections:
 Create the conda environments in the top level of `$WORKDIR`:
 
 ```bash
-conda env create -y -p env --file env-rilseq.yaml
+conda env create -y -p env --file env.yaml
 ```
 
 
@@ -96,6 +96,8 @@ files.
 
 ## Run RNAseq workflow
 
+Prerequisite: annotation workflow should be run first to produce the annotation file.
+
 All RNAseq samples are processed through a single snakemake pipeline, based on the
 [lcdb-wf](https://github.com/lcdb/lcdb-wf) github repository. The initial steps of QC filtering
 and alignment to the genome are common to Total RNA (RNAseq) and IP or input (RIPseq) samples.
@@ -138,6 +140,9 @@ TSV tables are provided.
 
 
 ## Run RILseq workflow
+
+Prerequisite: the annotation workflow and RNAseq workflows should be run first to produce the annotation
+and counts files respectively.
 
 This workflow identifies RNA-RNA interactions by finding chimera transcripts in cross-linked samples.
 The snakemake pipeline starts by generating the cutadapt-trimmed FASTQ files using `cutadapt`,
