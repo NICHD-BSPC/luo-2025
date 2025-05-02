@@ -1,0 +1,63 @@
+---
+title: Annotation hub cache
+output:
+    html_document:
+        code_folding: hide
+        toc: true
+        toc_float: true
+        toc_depth: 3
+---
+
+
+```{r global_options, include=FALSE}
+# Sets up global options for rendering RMarkdown into HTML.
+knitr::opts_chunk$set(
+    warning=FALSE,
+    message=FALSE
+)
+```
+
+```{r lcdbwf, results='hide'}
+# Load the lcdbwf R package, which is stored locally.
+# This package has many custom functions used throughout this document.
+devtools::document('../../../lib/lcdbwf')
+devtools::load_all('../../../lib/lcdbwf')
+```
+
+```{r libraries}
+library(AnnotationHub)
+#library(BiocParallel)
+```
+
+```{r config}
+config <- lcdbwf:::load_config('config.yaml')
+
+#parallel <- config$parallel$parallel
+#if (config$parallel$parallel){
+#    register(MulticoreParam(config$parallel$cores))
+#}
+```
+
+
+# Changelog
+
+**Initial results**
+
+Last run: `r date()`
+
+
+
+```{r orgdb, cache=TRUE}
+lcdbwf:::get_annotation_db(config, dbtype="OrgDb")
+```
+
+
+ 
+
+# Session info
+For reproducibility purposes, here is the output of `sessionInfo()` showing the
+versions of all packages used here.
+
+```{r sessioninfo}
+sessionInfo()
+```
