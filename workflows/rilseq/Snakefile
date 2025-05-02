@@ -566,7 +566,8 @@ def get_downstream_input(wc):
     all_fragments=['data/rnaseq_rilseq/{}/{}_all_fragments.txt'.format(sp, sp) for sp in samples]
     sig_fragments=['data/rnaseq_rilseq/{}/{}_significant_fragments.txt'.format(sp, sp) for sp in samples]
     unified=['data/rnaseq_rilseq/{}_unified/{}_unified_significant_fragments.txt'.format(gp, gp) for gp in group]
-    return(rillibsize + all_fragments + sig_fragments + unified)
+    featurecounts=['data/rnaseq_rilseq/featurecounts_{}.txt'.format(gp) for gp in ['single', 'chimera', 'bulkRNAseq']]
+    return(rillibsize + all_fragments + sig_fragments + unified + featurecounts)
 
 rule downstream_Rmd:
     input:
@@ -581,8 +582,8 @@ rule downstream_Rmd:
     conda:
         '../../env-r.yaml'
     resources:
-        mem_mb=48*1024,
-        disk_mb=48*1024,
+        mem_mb=128*1024,
+        disk_mb=128*1024,
         runtime=12*60
     log:
         'logs/downstream_Rmd_{subgroup}.log'
@@ -605,8 +606,8 @@ rule downstream_unified_Rmd:
     conda:
         '../../env-r.yaml'
     resources:
-        mem_mb=48*1024,
-        disk_mb=48*1024,
+        mem_mb=128*1024,
+        disk_mb=128*1024,
         runtime=12*60
     log:
         'logs/downstream_unified_Rmd_{subgroup}.log'
