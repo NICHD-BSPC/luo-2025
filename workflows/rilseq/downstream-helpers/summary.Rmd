@@ -436,10 +436,8 @@ for (gp in names(unified_fns)) {
   }
 }
 
-
-
 # save the results in excel file
-exported_excel(sig.chimera, unified_fns,
+exported_excel(sig.chimeras, unified_fns,
                file=paste0('Summary_RILSeq_S-chimeras_', subgroup_i, '.xlsx'))
 ```
 
@@ -540,6 +538,7 @@ sample_match <- function(x) {
   stringr::str_replace(x, '-antiHfq', '_totalRNA_noIP') %>%
     stringr::str_replace('antiHfq', 'totalRNA_noIP') %>%
     stringr::str_replace('antiFLAG', 'totalRNA_noIP') %>%
+    stringr::str_replace('ctrlplasmid_IP', 'ctrlplasmid_totalRNA') %>%
     stringr::str_replace('_input', '')
 }
 
