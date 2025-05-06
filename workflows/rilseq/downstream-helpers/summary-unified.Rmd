@@ -481,8 +481,9 @@ exported_excel_unified <- function(sig.unified, unified_fns, file='Summary_RILSe
   wb <- openxlsx::createWorkbook()
 
   for (sp in names(unified_fns)) {
+    target_cols_i <- target_cols[target_cols %in% names(sig.unified[[sp]])]
     openxlsx::addWorksheet(wb, sp)
-    openxlsx::writeData(wb, sp, x=sig.unified[[sp]][target_cols], withFilter=TRUE)
+    openxlsx::writeData(wb, sp, x=sig.unified[[sp]][target_cols_i], withFilter=TRUE)
 
   }
   openxlsx::saveWorkbook(wb, file=file, overwrite=TRUE)
