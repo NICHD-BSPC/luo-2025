@@ -364,64 +364,6 @@ contr_08_R16Aflag_vs_WTflag_RILenrich <- lcdbwf:::make_results(
 ```
 
 
-```{r results_09, dependson='dds_list', cache=TRUE, eval=FALSE}
-# FLAG anti-FLAG were not used in manuscript
-#contr_09_WTflag_FLAGenrich <- lcdbwf:::make_results(
-#  dds_name="main",
-#  contrast=c("group", "Hfq-FLAG_antiFLAG", "Hfq-FLAG_totalRNA_noIP"),
-#  type="ashr",
-#  label="21 vs 3: Hfq-FLAG_antiFLAG vs. Hfq-FLAG_totalRNA_noIP"
-#)
-```
-
-```{r results_10, dependson='dds_list', cache=TRUE, eval=FALSE}
-# FLAG anti-FLAG were not used in manuscript
-#contr_10_R16Aflag_FLAGenrich <- lcdbwf:::make_results(
-#  dds_name="main",
-#  contrast=c("group", "R16A-FLAG_antiFLAG", "R16A-FLAG_totalRNA_noIP"),
-#  type="ashr",
-#  label="22 vs 4: R16A-FLAG_antiFLAG vs. R16A-FLAG_totalRNA_noIP"
-#)
-```
-
-
-```{r results_11, dependson='dds_list', cache=TRUE, eval=FALSE}
-# FLAG anti-FLAG were not used in manuscript
-# (gp4 vs. gp3) vs. (gp2 vs. gp1)
-#gp1 <- lcdbwf:::dds_coefs('main', group=='Hfq-FLAG_totalRNA_noIP')
-#gp2 <- lcdbwf:::dds_coefs('main', group=='Hfq-FLAG_antiFLAG')
-#gp3 <- lcdbwf:::dds_coefs('main', group=='R16A-FLAG_totalRNA_noIP')
-#gp4 <- lcdbwf:::dds_coefs('main', group=='R16A-FLAG_antiFLAG')
-#contr_11_R16Aflag_vs_WTflag_FLAGenrich <- lcdbwf:::make_results(
-#  dds_name='main',
-#    label='(22 vs 4) vs (21 vs 3): R16Aflag_vs_WTflag enrich when FLAG pulldown',
-#  contrast=(gp4 - gp3) - (gp2 - gp1),
-#  type='ashr'
-#)
-```
-
-```{r results_12, dependson='dds_list', cache=TRUE, eval=FALSE}
-# FLAG anti-FLAG were not used in manuscript
-#contr_12_WTflag_antibody_diff <- lcdbwf:::make_results(
-#  dds_name="main",
-#  contrast=c("group", "Hfq-FLAG_antiFLAG", "Hfq-FLAG-antiHfq"),
-#  type="ashr",
-#  label="21 vs 19: Hfq-FLAG_antiFLAG vs. Hfq-FLAG-antiHfq, Is the pull-down antibody changing IP in WTflag"
-#)
-```
-
-
-```{r results_13, dependson='dds_list', cache=TRUE, eval=FALSE}
-# FLAG anti-FLAG were not used in manuscript
-#contr_13_R16Aflag_antibody_diff <- lcdbwf:::make_results(
-#  dds_name="main",
-#  contrast=c("group", "R16A-FLAG_antiFLAG", "R16A-FLAG_antiHfq"),
-#  type="ashr",
-#  label="22 vs 20: R16A-FLAG_antiFLAG vs. R16A-FLAG_antiHfq, Is the pull-down antibody changing IP in R16Aflag"
-#)
-```
-
-
 
 ```{r assemble_variables, cache=TRUE, config=config$annotation, dependson=knitr::all_labels()[grepl("^results_", knitr::all_labels())]}
 res_list <- lcdbwf:::collect_objects("^contr_[^_]+_")

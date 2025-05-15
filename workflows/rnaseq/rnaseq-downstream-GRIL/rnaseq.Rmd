@@ -404,7 +404,7 @@ contr_05_R16A_vs_WT_plasmidinteraction <- lcdbwf:::make_results(
 
 
 
-```{r results_06, dependson='dds_list', cache=TRUE, eval=FALSE}
+```{r results_06, dependson='dds_list', cache=TRUE}
 contr_06_delHfq_vs_WT_t4rnl1 <- lcdbwf:::make_results(
   dds_name="main",
   contrast=c("group", "delHfq_t4rnl1_totalRNA", "Hfq_t4rnl1_totalRNA"),
@@ -413,7 +413,7 @@ contr_06_delHfq_vs_WT_t4rnl1 <- lcdbwf:::make_results(
 )
 ```
 
-```{r results_07, dependson='dds_list', cache=TRUE, eval=FALSE}
+```{r results_07, dependson='dds_list', cache=TRUE}
 contr_07_delHfq_vs_WT_ctrlplasmid <- lcdbwf:::make_results(
   dds_name="main",
   contrast=c("group", "delHfq_ctrlplasmid_totalRNA", "Hfq_ctrlplasmid_totalRNA"),
@@ -423,7 +423,7 @@ contr_07_delHfq_vs_WT_ctrlplasmid <- lcdbwf:::make_results(
 ```
 
 
-```{r results_08, dependson='dds_list', cache=TRUE, eval=FALSE}
+```{r results_08, dependson='dds_list', cache=TRUE}
 contr_08_delHfq_t4rnl1_vs_ctrlplasmid <- lcdbwf:::make_results(
   dds_name="main",
   contrast=c("group", "delHfq_t4rnl1_totalRNA", "delHfq_ctrlplasmid_totalRNA"),
@@ -433,7 +433,7 @@ contr_08_delHfq_t4rnl1_vs_ctrlplasmid <- lcdbwf:::make_results(
 ```
 
 
-```{r results_09, dependson='dds_list', cache=TRUE, eval=FALSE}
+```{r results_09, dependson='dds_list', cache=TRUE}
 coef1 <- lcdbwf:::dds_coefs('main', group=='Hfq_ctrlplasmid_totalRNA')
 coef2 <- lcdbwf:::dds_coefs('main', group=='Hfq_t4rnl1_totalRNA')
 coef3 <- lcdbwf:::dds_coefs('main', group=='delHfq_ctrlplasmid_totalRNA')

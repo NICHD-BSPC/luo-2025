@@ -551,7 +551,7 @@ contr_17_interacR16A_vs_WT_IP <- lcdbwf:::make_results(
 
 
 ```{r results_18, dependson='dds_list', cache=TRUE}
-#  8 vs 7: difference in IP R16A vs. WT, antiFLAG (requested, warn about interaction effect, should include the noIP in an interaction contrast)
+#  8 vs 7: difference in IP R16A vs. WT, antiHfq)
 
 contr_18_R16Aflag_vs_WTflag_IP <- lcdbwf:::make_results(
   dds_name="main",
