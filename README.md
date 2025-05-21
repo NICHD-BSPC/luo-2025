@@ -61,10 +61,10 @@ conda activate ../../env
 snakemake --cores=$CORES --use-conda
 ```
 
-This generates the output file `workflows/ecoli-dash/data/ecoli.GCF_000005845.2_ASM584v2_20/candidates_oligos.csv`,
+This generates the output file `workflows/ecoli-dash/data/ecoli.GCF_000005845.2_ASM584v2_20/candidates_oligos_annotated.tsv`,
 a comma-separated file of unique full oligo sequences. They are built from the T7 promoter
 sequence, the 20-bp candidate guides, the Cas9 sgRNA scaffold and the reverse complement of
-the primer.
+the primer. Targeted rRNAs are indicated as well.
 
 
 ## Run annotation workflow

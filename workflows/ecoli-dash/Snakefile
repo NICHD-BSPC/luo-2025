@@ -65,6 +65,8 @@ rule targets:
                calc=['gc', 'tm'], reference_name = config['reference_name'], guidelen = config['guide_length']),
         expand('data/{reference_name}_{guidelen}/candidates_coverage.pdf',
                calc=['gc', 'tm'], reference_name = config['reference_name'], guidelen = config['guide_length']),
+        expand('data/{reference_name}_{guidelen}/candidates_oligos_annotated.tsv',
+               reference_name = config['reference_name'], guidelen = config['guide_length']),
 
         # diagnostics
         expand( 'data/QC/guide_{calc}_{reference_name}_{guidelen}.tsv',
@@ -253,6 +255,7 @@ rule run_DASH:
         grna = 'data/{reference_name}_{guidelen}/candidates_grnas.fa',
         oligo = 'data/{reference_name}_{guidelen}/candidates_oligos.csv',
         cov = 'data/{reference_name}_{guidelen}/candidates_coverage.pdf',
+        bed = 'data/{reference_name}_{guidelen}/candidates_grnas.bed',
     run:
         CandidateFinder(
             fasta=input.fna,
@@ -263,6 +266,43 @@ rule run_DASH:
             max_gc=params.max_gc,
             outfn=params.outfn
         )
+
+
+rule annotate_oligo:
+    """
+    to data/candidate_oligos.tsv, add which rRNA(s) the oligo mapped to
+    """
+    input:
+        rRNA = 'references_data/fixed_start_rRNA_{reference_name}.bed',
+        oligo = 'data/{reference_name}_{guidelen}/candidates_oligos.csv',
+        bed = 'data/{reference_name}_{guidelen}/candidates_grnas.bed',
+    log:
+        'logs/annotate_oligos_{reference_name}_{guidelen}.log'
+    output:
+        oligo = 'data/{reference_name}_{guidelen}/candidates_oligos_annotated.tsv',
+    run:
+        # list of unique oligos
+        df = pd.read_csv(input.oligo, header=None)
+        df.columns = ['ID', 'sequence']
+        # all positions for all non-unique oligos
+        bed = pd.read_csv(input.bed, sep='\t', header=None)
+        bed.columns = bed_colnames
+        # bedtools intersect to find the rRNA matching the oligos
+        intsct = pybedtools.BedTool.from_dataframe(bed
+            ).intersect(
+                pybedtools.BedTool(input.rRNA), loj=True
+            ).to_dataframe()
+        intsct.columns = bed_colnames + [x + '_rRNA' for x in bed_colnames]
+        intsct[['ID', 'grna']] = intsct['name'].str.split('_', expand=True)
+        tmp = intsct['name_rRNA'].str.split('gene "', expand=True)[1]
+        intsct['rRNA'] = tmp.str.split('"', expand=True)[0]
+        intsct = intsct[['ID', 'grna', 'rRNA']].groupby('grna').agg({
+            'ID' : 'first',
+            'rRNA' : ','.join})
+        intsct = dict(zip(intsct['ID'], intsct['rRNA']))
+        # populate the oligo df with the rRNAs
+        df['rRNA'] = [intsct[x] for x in df['ID'].astype(str)]
+        df.to_csv(output.oligo, sep='\t', index=None)
 
 
 rule guide_gc:
