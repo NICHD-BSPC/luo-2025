@@ -1,0 +1,387 @@
+---
+title: Summary RILseq analysis
+output:
+    html_document:
+        code_folding: hide
+        toc: true
+        toc_float: true
+        toc_depth: 3
+params:
+  subgroup: 'R16A_antiHfq'
+  sampletable: '../config/sampletable.tsv'
+---
+
+```{r global_options, include=FALSE}
+# Sets up global options for rendering RMarkdown into HTML.
+knitr::opts_chunk$set(
+    warning=FALSE,
+    message=FALSE,
+    cache.lazy = FALSE, # to fix error:
+                        # Error in lazyLoadDBinsertVariable(vars[i], from, datafile, ascii, compress,  :
+                        # long vectors not supported yet: connections.c:6074
+    cache.extra_file_dep_1 = file.info(params$sampletable)$mtime
+    )
+```
+
+
+```{r libraries}
+library(dplyr)
+library(DT)
+library(ggplot2)
+library(plotly)
+library(data.table)
+library(openxlsx)
+# functions
+source('../downstream-helpers/helpers.R')
+```
+
+# Sampletable
+
+```{r data}
+subgroup_i <- params$subgroup
+spt <- read.csv('../config/sampletable.tsv', sep='\t')
+knitr::kable(spt %>%
+                select(-layout, -orig_filename, -orig_filename_R2)
+                )
+samples <- spt %>%
+    filter(fraction == 'IP', subgroup == subgroup_i) %>%
+    .[['samplename']]
+```
+
+
+
+
+
+```{r read_xlsx, cache=TRUE}
+fns <- list(
+    'reads' = paste0('Summary_interactions_with_IP_', subgroup_i, '.xlsx'),
+    'chimeras' = paste0('Summary_RILSeq_S-chimeras_', subgroup_i, '.xlsx')
+    )
+
+sheet_names <- list(
+    'reads' = c('RILseq_all_chimeras', 'RILseq_singles', 'Total_RNAseq'),
+    'chimeras' = samples
+    )
+
+res_list <- list()
+
+for (nm in names(fns)) {
+  res_list[[nm]] <- lapply(sheet_names[[nm]], function(x){
+    read.xlsx(fns[[nm]], sheet=x)
+  })
+  names(res_list[[nm]]) <- sheet_names[[nm]]
+}
+```
+
+# Mapped reads distribution
+
+Here we used the TPM counts from `r fns[['reads']]`, summed per feature type. The results are plotted
+in stacked bar graphs.
+
+
+```{r prep_histogram, results='asis', cache=TRUE, dependson='read_xlsx'}
+common_cols <- c('Geneid', 'Chr', 'Start', 'End', 'Strand', 'Length', 'Type', paste0('FPM_', samples))
+
+conv_type <- list(
+  "empty"='other',
+  "3UTR"="3UTR",
+  "5UTR"="5UTR",
+  "AS"="AS",
+  "IGR"="IGR",
+  "IGT"="IGT",
+  "cis_AS_with_trans_t"="other",
+  "mRNA"="mRNA",
+  "other-ncRNA"="other",
+  "rRNA"="rRNA",
+  "sRNA"="sRNA",
+  "tRNA"="tRNA"
+)
+
+
+dir.create('plots', showWarnings = FALSE)
+
+plot_dist_hist <- function(df.i, label) {
+    df.i <- df.i %>%
+        tidyr::pivot_longer(starts_with('FPM'), values_to='TPM', names_to='samples') %>%
+        # simplify sample names
+        mutate(samples = gsub('FPM_', '', samples)) %>%
+        # simplify categories
+        mutate(Type = ifelse(Type == "", 'empty', Type))
+    df.i[['Type']] <- conv_type[df.i[['Type']]] %>% unlist()
+
+    # aggregate by Type
+    df.i <- df.i %>%
+        group_by(Type, samples) %>%
+        summarize(Cumulative_sum_TPM=sum(TPM))
+
+    # samples as factor to plot in same order
+    df.i[['samples']] <- factor(df.i[['samples']], levels=unique(df.i[['samples']]))
+
+    p <- ggplot(df.i, aes(x=samples, y=Cumulative_sum_TPM, fill=Type)) +
+      geom_bar(stat='identity') +
+      theme_classic() +
+      theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=1))
+
+    print(p)
+    fn <- paste0('plots/barplot_', label, '.pdf')
+    ggsave(fn)
+    cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
+}
+
+for (nm in names(res_list[['reads']])) {
+  cat(paste0('\n\n## ', nm, '\n\n'))
+  plot_dist_hist(res_list[['reads']][[nm]][common_cols], nm)
+}
+```
+
+
+# S-Chimera distribution
+
+
+```{r pie_prep, results='asis', cache=TRUE, dependson='read_xlsx'}
+# aggregate all samples into 1 df
+# don't need untagged
+samples <- samples[!grepl('Untagged', samples)]
+res_sub <- res_list[['chimeras']][samples]
+
+# make the categories for RNA1 and RNA2 types, follow the hierarchy:
+# - contains both sRNA and mRNA
+# - sRNA ORF (but not mRNA)
+# - mRNA (but not sRNA)
+# - both 5UTR and 3UTR
+# - 5UTR (but not 3UTR)
+# - 3UTR (but not 5 UTR)
+# - AS
+# - IGR
+# - other
+
+get_hierarchical_category <- function(x) {
+    if (grepl('mRNA', x) & grepl('sRNA', x)) {
+        return('mRNA_and_sRNA')
+    } else if (grepl('mRNA', x)) {
+        return('mRNA')
+    } else if (grepl('sRNA', x)) {
+        return('sRNA')
+    } else if (grepl('5UTR', x) & grepl('3UTR', x)) {
+        return('5UTR_and_3UTR')
+    } else if (grepl('5UTR', x)) {
+        return('5UTR')
+    } else if (grepl('3UTR', x)) {
+        return('3UTR')
+    } else if (grepl('AS', x)) {
+        return('AS')
+    } else if (grepl('IGR', x)) {
+        return('IGR')
+    } else {
+        return('other')
+    }
+}
+
+# assign the RNA categories and make pairs (1 sorted and 1 non sorted to distinguish sRNA-mRNA from mRNA-sRNA)
+res_sub <- lapply(res_sub, function(x) {
+    x[['TypeRNA1']] <- lapply(x[['TypeRNA1']], get_hierarchical_category) %>% unlist()
+    x[['TypeRNA2']] <- lapply(x[['TypeRNA2']], get_hierarchical_category) %>% unlist()
+    x[['sorted_pair']] <- lapply(rownames(x), function(y) {
+        paste0(sort(c(x[y,'TypeRNA1'], x[y, 'TypeRNA2']), decreasing=TRUE), collapse='-')
+    }) %>% unlist()
+    x[['ordered_pair']] <- lapply(rownames(x), function(y) {
+        paste0(c(x[y,'TypeRNA1'], x[y, 'TypeRNA2']), collapse='-')
+    }) %>% unlist()
+#    x[['chimera_fraction']] <- 1/dim(x)[[1]]
+#    x[['interactions_fraction']] <- x[['interactions']] / sum(x[['interactions']])
+    return(x)
+})
+
+# aggregate samples into 1 df
+res_sub <- do.call(rbind, res_sub)
+
+# first group by ID to get the totals
+totals <- res_sub %>%
+    select(sorted_pair, ID, interactions) %>%
+    group_by(ID) %>%
+    summarize(total_chimera = n(), total_interactions = sum(interactions))
+
+# merge the totals and group by sorted pair
+df.i <- merge(res_sub, totals) %>%
+    group_by(sorted_pair, ID) %>%
+    reframe(
+        'chimera_fraction' = n()/total_chimera,
+        'interactions_fraction' = sum(interactions)/total_interactions
+    ) %>%
+    distinct()
+
+# too many small categories, group them
+# take the max among samples of each category and take the top X categories
+to_keep <- df.i %>%
+    group_by(sorted_pair) %>%
+    summarize(
+        max_chimera = max(chimera_fraction),
+        max_interactions = max(interactions_fraction)) %>%
+    arrange(desc(max_interactions)) %>%
+    slice(1:10) %>%
+    .[['sorted_pair']]
+# some categories are related and should be grouped
+to_group <- c('mRNA_and_sRNA-mRNA', 'sRNA-mRNA_and_sRNA', 'mRNA_and_sRNA-mRNA_and_sRNA')
+
+# add simplified pair column and recalculate the group_by 
+res_sub <- res_sub %>%
+    mutate(simplified_pair = ifelse(
+        sorted_pair %in% c(to_keep, to_group), sorted_pair, 'other')) %>%
+    mutate(simplified_pair = ifelse(
+        simplified_pair %in% to_group, 'overlapping_sRNAs_and_mRNAs', simplified_pair))
+
+totals <- res_sub %>%
+    select(simplified_pair, ID, interactions) %>%
+    group_by(ID) %>%
+    summarize(total_chimera = n(), total_interactions = sum(interactions))
+
+# merge the totals and group by sorted pair
+df.i <- merge(res_sub, totals) %>%
+    group_by(simplified_pair, ID) %>%
+    reframe(
+        'chimera_fraction' = n()/total_chimera,
+        'interactions_fraction' = sum(interactions)/total_interactions
+    ) %>%
+    distinct()
+
+# rearrange the sample order, to have WT first
+df.i[['ID']] <- factor(df.i[['ID']], levels=unique(df.i[['ID']]))
+```
+
+In this section, we used Summary_RILSeq_S-chimeras.xlsx as input to plot the distribution of chimera
+feature pairs (RNA1-RNA2).
+
+The categories are assigned with hierarchical rules for RNA1, then RNA2:
+
+- contains both sRNA and mRNA (called mRNA_and_sRNA)
+- sRNA (but not mRNA)
+- mRNA (but not sRNA)
+- both 5UTR and 3UTR
+- 5UTR (but not 3UTR)
+- 3UTR (but not 5 UTR)
+- AS
+- IGR
+- other
+
+The chimera pairs are assigned a name made of alphabetically sorted RNA1 and RNA2, separated by a dash.
+The order of RNA1 and RNA2 is not taken into account (i.e.
+mRNA-sRNA and sRNA-mRNA are both categorized in ``sRNA-mRNA``).
+
+We decided to subset the pair categories to the most informative.
+
+The 10 most abundant categories in term of number of
+supporting interactions returned:
+
+```{r, results='asis'}
+for (c in to_keep) {
+    cat(paste0('\n\n- ', c, '\n\n'))
+}
+
+cat('\n\nThe following categories are related and will be grouped under ``overlapping_sRNAs_and_mRNAs``:\n\n')
+
+for (c in to_group) {
+    cat(paste0('\n\n- ', c, '\n\n'))
+}
+```
+
+All other, less abundant, categories will be grouped under ``other``.
+
+```{r plot_pie, results='asis', cache=TRUE, dependson='pie_prep', fig.height=10}
+cat('\n\n## Fraction of chimera\n\n')
+ggplot(df.i, aes(x='', y = chimera_fraction, fill = simplified_pair)) +
+  geom_col(color='black', linewidth=0.2) +
+  coord_polar(theta = "y", start = 0) + 
+  facet_wrap(vars(ID), ncol = 2) +
+  theme_void() +
+  theme(text = element_text(size = 10)) +
+  ggtitle('Distribution of chimera')
+
+fn <- 'plots/pie_chart_chimera_fraction.pdf'
+ggsave(fn, width = 15, height = 15, units = "cm", dpi=600)
+cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
+
+cat('\n\n## Fraction of total interaction numbers\n\n')
+ggplot(df.i, aes(x='', y = interactions_fraction, fill = simplified_pair)) +
+  geom_col(color='black', linewidth=0.2) +
+  coord_polar(theta = "y", start = 0) + 
+  facet_wrap(vars(ID), ncol = 2) +
+  theme_void() +
+  theme(text = element_text(size = 10)) + 
+  ggtitle('Distribution of interactions')
+
+fn <- 'plots/pie_chart_interactions_fraction.pdf'
+ggsave(fn, width = 15, height = 15, units = "cm", dpi=600)
+cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
+
+```
+
+# sRNA order in RNA1 or RNA2
+
+Below are pie charts for sRNA-mRNA and sRNA-5’UTR respectively, showing the distribution
+of whether sRNAs were assigned to RNA1 or RNA2. This is to confirm whether most sRNAs still
+occupy RNA2 position.
+
+
+```{r position, results='asis'}
+# want to group by ordered pairs, but recalculate the fractions relative to the simplified pairs
+totals <- res_sub %>%
+    select(simplified_pair, ID, interactions) %>%
+    group_by(ID, simplified_pair) %>%
+    summarize(total_chimera = n(), total_interactions = sum(interactions))
+
+# merge the totals and group by sorted pair
+# note that the ordered_pair has not been simplified. Categories modified in simplification will be wrong here
+df.i <- merge(res_sub, totals) %>%
+    group_by(ordered_pair, ID) %>%
+    reframe(
+        'chimera_fraction' = n()/total_chimera,
+        'interactions_fraction' = sum(interactions)/total_interactions,
+        'ordered_pair' = unique(ordered_pair),
+        'simplified_pair' = unique(simplified_pair)
+    ) %>%
+    distinct()
+
+# rearrange the sample order, to have WT first
+df.i[['ID']] <- factor(df.i[['ID']], levels=unique(df.i[['ID']]))
+
+# color-coordinating with full list pie charts
+cols <- list(
+    'sRNA-mRNA' = c('#873DBF', '#C48DEB'),
+    'sRNA-5UTR' = c('#42A15A', '#85D99B')
+    )
+
+for (categ in c('sRNA-mRNA', 'sRNA-5UTR')) {
+    # filter to sRNA-mRNA interactions only, 
+    cat('\n\n## Fraction of chimera\n\n')
+    p <- ggplot(df.i %>% filter(simplified_pair == categ),
+        aes(x='', y = chimera_fraction, fill = ordered_pair)) +
+      geom_col(color='black', linewidth=0.2) +
+      coord_polar(theta = "y", start = 0) + 
+      facet_wrap(vars(ID), ncol = 2) +
+      theme_void() +
+      scale_fill_manual(values=cols[[categ]]) +
+      theme(text = element_text(size = 10)) +
+      ggtitle('Distribution of chimera')
+    print(p)
+
+    fn <- paste0('plots/pie_chart_chimera_', categ, '_order.pdf')
+    ggsave(fn, width = 15, height = 15, units = "cm", dpi=600)
+    cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
+
+    cat('\n\n## Fraction of total interaction numbers\n\n')
+    p <- ggplot(df.i %>% filter(simplified_pair == categ),
+        aes(x='', y = interactions_fraction, fill = ordered_pair)) +
+      geom_col(color='black', linewidth=0.2) +
+      coord_polar(theta = "y", start = 0) + 
+      facet_wrap(vars(ID), ncol = 2) +
+      theme_void() +
+      scale_fill_manual(values=cols[[categ]]) +
+      theme(text = element_text(size = 10)) + 
+      ggtitle('Distribution of interactions')
+    print(p)
+
+    fn <- paste0('plots/pie_chart_interactions_', categ, 'order.pdf')
+    ggsave(fn, width = 15, height = 15, units = "cm", dpi=600)
+    cat(paste0('\n\n- [', fn, '](', fn, ')\n\n'))
+}
+```

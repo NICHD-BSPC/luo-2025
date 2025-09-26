@@ -617,5 +617,28 @@ rule downstream_unified_Rmd:
         'Rscript -e '
         '''"rmarkdown::render('summary-unified.Rmd', output_file='summary-unified.html', params=list(subgroup='{wildcards.subgroup}', gtf='../{input.gff}', sampletable='../{input.sampletable}'))"'''
 
+rule downstream_distribution:
+    input:
+        rmd='downstream-helpers/distribution.Rmd',
+        xlsx='downstream-{subgroup}/Summary_RILSeq_S-chimeras_{subgroup}.xlsx',
+        xlsx2='downstream-{subgroup}/Summary_interactions_with_IP_{subgroup}.xlsx',
+        sampletable=config['sampletable']
+    output:
+        html='downstream-{subgroup}/distribution.html',
+    conda:
+        '../../env-r.yaml'
+    resources:
+        mem_mb=128*1024,
+        disk_mb=128*1024,
+        runtime=12*60
+    log:
+        'logs/downstream_distribution_{subgroup}.log'
+    shell:
+        'rsync -t {input.rmd} downstream-{wildcards.subgroup}/; '
+        'cd downstream-{wildcards.subgroup}; '
+        'Rscript -e '
+        '''"rmarkdown::render('distribution.Rmd', output_file='distribution.html', params=list(subgroup='{wildcards.subgroup}', sampletable='../{input.sampletable}'))"'''
+
+
 
 # vim: ft=python
