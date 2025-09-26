@@ -331,8 +331,8 @@ rule generate_BED_sig:
     log:
         'logs/generate_BED_{sample}.log'
     resources:
-        mem_mb=256*1024,
-        disk_mb=256*1024,
+        mem_mb=250*1024,
+        disk_mb=250*1024,
         runtime=120
     output:
         'data/rnaseq_rilseq/{sample}/{sample}_significant.bed'
