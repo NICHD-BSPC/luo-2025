@@ -11,7 +11,7 @@ params:
   sampletable: '../config/sampletable.tsv'
 #  mappings: False
 #  gtf: False
-  gtf: '../../annotation/data/NC_000913-3_gene_tRNA.patch3.gff'
+  gtf: '../../annotation/data/NC_000913-3_gene_tRNA.patch3.5.gff'
 ---
 
 ```{r global_options, include=FALSE}

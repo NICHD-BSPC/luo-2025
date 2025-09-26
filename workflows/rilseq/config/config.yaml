@@ -3,6 +3,6 @@ sampletable: 'config/sampletable.tsv'
 references:
   genome: '../annotation/data/ecoli_default.fasta'
   bwi_index: '../annotation/data/ecoli_default.fasta.bwt'
-  annotation: '../annotation/data/NC_000913-3_gene_tRNA.patch3.gff'
+  annotation: '../annotation/data/NC_000913-3_gene_tRNA.patch3.5.gff'
 
 circos_conf: 'config/RILseq-master/data/E_coli_K12/ver2/draw_links.conf'

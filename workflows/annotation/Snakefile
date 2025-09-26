@@ -19,7 +19,7 @@ config = yaml.safe_load(open(configfn))
 
 
 final_targets = [
-    'data/NC_000913-3_gene_tRNA.patch3.gff',
+    'data/NC_000913-3_gene_tRNA.patch3.5.gff',
     # all features are "exons" to be quantified by featurecounts
     'data/NC_000913-3_gene_tRNA.patch4.gff',
     # fasta and bwa index
@@ -431,6 +431,31 @@ rule patch3:
         my_csv(p2[gff_cols], output.gff)
 
 
+rule patch3dot5:
+    """
+    for the manuscript, changing TUs to IGTs
+    """
+    input:
+        p3 = 'data/NC_000913-3_gene_tRNA.patch3.gff',
+    output:
+        gff = 'data/NC_000913-3_gene_tRNA.patch3.5.gff',
+    log:
+        'logs/patch3dot.log'
+    run:
+        # read inputs
+        p3 = pd.read_table(input.p3, sep='\t', header=None)
+        gff_cols = ['chrom', 'source', 'feature', 'start', 'end', 'score',
+                      'strand', 'na', 'description']
+        p3.columns = gff_cols
+        p3.loc[p3['feature'] == 'TU', 'feature'] = 'IGT'
+        p3['description'] = p3['description'].str.replace('.TU', '.IGT', regex=False)
+        p3['description'] = p3['description'].str.replace('"TU"', '"IGT"', regex=False)
+        # some gene description fields are badly formated, contain ';' which will interfer
+        # with gffutils
+        p3['description'] = p3['description'].replace(r'([^"];)', ' :: ', regex=True)
+        my_csv(p3[gff_cols], output.gff)
+
+
 rule patch4:
     """
     to be able to quantify every feature in featurcounts, make a version
@@ -438,14 +463,14 @@ rule patch4:
     There are no overlapping features, but they are all adjacent
     """
     input:
-        p3 = 'data/NC_000913-3_gene_tRNA.patch3.gff',
+        p3dot5 = 'data/NC_000913-3_gene_tRNA.patch3.5.gff',
     output:
         gff = 'data/NC_000913-3_gene_tRNA.patch4.gff',
     log:
         'logs/patch4.log'
     run:
         # read inputs
-        p3 = pd.read_table(input.p3, sep='\t', header=None)
+        p3 = pd.read_table(input.p3dot5, sep='\t', header=None)
         gff_cols = ['chrom', 'source', 'feature', 'start', 'end', 'score',
                       'strand', 'na', 'description']
         p3.columns = gff_cols

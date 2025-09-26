@@ -11,7 +11,7 @@ params:
   sampletable: '../config/sampletable.tsv'
 #  mappings: False
 #  gtf: False
-  gtf: '../../annotation/data/NC_000913-3_gene_tRNA.patch3.gff'
+  gtf: '../../annotation/data/NC_000913-3_gene_tRNA.patch3.5.gff'
 ---
 
 ```{r global_options, include=FALSE}
@@ -457,7 +457,7 @@ the files `{sample}_all_fragments.txt`. BAM files were then subsetted by those r
 generate BAM files of chimera reads only or of single reads only. `feat**ureCounts` was used with the
 following parameters to count the reads mapping to any features from the updated annotation:
 
-- `-t 3UTR,IGR,5UTR,AS,exon,TU,mRNA,other-ncRNA,cis_AS_with_trans_t`: include all features
+- `-t 3UTR,IGR,5UTR,AS,exon,IGT,mRNA,other-ncRNA,cis_AS_with_trans_t`: include all features
 - `-g gene_name `: specify attribute type in GTF annotation to use as name
 - `-s 2`: reverse stranded library
 - `-O`: assign reads to all their overlapping features
