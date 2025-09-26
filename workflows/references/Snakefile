@@ -325,7 +325,7 @@ rule mappings:
 
         # Depending on how many attributes there were and the
         # include_featuretypes settings, this may take a while.
-        df = df.drop_duplicates()
+        df = df.drop_duplicates('gene_id')
 
         df.to_csv(output[0], sep='\t', index=False, compression='gzip')
 
