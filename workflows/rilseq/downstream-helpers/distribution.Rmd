@@ -130,7 +130,11 @@ plot_dist_hist <- function(df.i, label) {
 
 for (nm in names(res_list[['reads']])) {
   cat(paste0('\n\n## ', nm, '\n\n'))
-  plot_dist_hist(res_list[['reads']][[nm]][common_cols], nm)
+  if (all(common_cols %in% names(res_list[['reads']][[nm]]))) {
+    plot_dist_hist(res_list[['reads']][[nm]][common_cols], nm)
+  } else {
+    cat('\n\nFPM for those samples were not processed.\n\n')
+  }
 }
 ```
 
