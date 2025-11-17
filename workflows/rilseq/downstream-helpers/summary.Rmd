@@ -539,6 +539,7 @@ sample_match <- function(x) {
     stringr::str_replace('antiHfq', 'totalRNA_noIP') %>%
     stringr::str_replace('antiFLAG', 'totalRNA_noIP') %>%
     stringr::str_replace('ctrlplasmid_IP', 'ctrlplasmid_totalRNA') %>%
+    stringr::str_replace('t4rnl1_IP', 't4rnl1_totalRNA') %>%
     stringr::str_replace('_input', '')
 }
 
