@@ -46,6 +46,11 @@ knitr::kable(spt %>%
 samples <- spt %>%
     filter(fraction == 'IP', subgroup == subgroup_i) %>%
     .[['samplename']]
+
+if (length(samples) == 0) {
+    cat(paste0('\n\nNo IP samples correspond to the subgroup ', subgroup_i, ', this analysis is not run.\n\n'))
+    knitr::knit_exit()
+}
 ```
 
 
