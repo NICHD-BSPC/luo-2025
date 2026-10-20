@@ -1,57 +1,57 @@
-samplename	group	antibody	FLAG	fraction	plasmid	layout	orig_filename	orig_filename_R2	original_samplenumber	batch	RNAseq_workflow	RIPseq_workflow
-Hfq_antiHfq_1	Hfq_antiHfq	antiHfq	no	IP		PE	../../demuxed-data/fastq231218/Hfq_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218/Hfq_antiHfq_1_2.fastq.gz	17	AX	no	yes
-Hfq_antiHfq_2	Hfq_antiHfq	antiHfq	no	IP		PE	../../demuxed-data/fastq231218/Hfq_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218/Hfq_antiHfq_2_2.fastq.gz	23	AX	no	yes
-Hfq_IPRNA_antiHfq_1	Hfq_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA		PE	../../demuxed-data/fastq231218_2/Hfq_IPRNA_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq_IPRNA_antiHfq_1_2.fastq.gz	5	AX	yes	no
-Hfq_IPRNA_antiHfq_2	Hfq_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA		PE	../../demuxed-data/fastq231218_2/Hfq_IPRNA_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq_IPRNA_antiHfq_2_2.fastq.gz	13	AX	yes	no
-Hfq_totalRNA_noIP_1	Hfq_totalRNA_noIP	no IP	no	Total RNA		PE	../../demuxed-data/fastq231218_2/Hfq_totalRNA_noIP_1_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq_totalRNA_noIP_1_2.fastq.gz	1	AX	yes	yes
-Hfq_totalRNA_noIP_2	Hfq_totalRNA_noIP	no IP	no	Total RNA		PE	../../demuxed-data/fastq231218_2/Hfq_totalRNA_noIP_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq_totalRNA_noIP_2_2.fastq.gz	9	AX	yes	yes
-Hfq-FLAG_IPRNA_antiHfq_1	Hfq-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA		PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_1_2.fastq.gz	7	AX	yes	no
-Hfq-FLAG_IPRNA_antiHfq_2	Hfq-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA		PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_IPRNA_antiHfq_2_2.fastq.gz	15	AX	yes	no
-Hfq-FLAG_totalRNA_noIP_1	Hfq-FLAG_totalRNA_noIP	no IP	FLAG	Total RNA		PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_totalRNA_noIP_1_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_totalRNA_noIP_1_2.fastq.gz	3	AX	yes	yes
-Hfq-FLAG_totalRNA_noIP_2	Hfq-FLAG_totalRNA_noIP	no IP	FLAG	Total RNA		PE	../../demuxed-data/fastq231218_2/Hfq-FLAG_totalRNA_noIP_2_1.fastq.gz	../../demuxed-data/fastq231218_2/Hfq-FLAG_totalRNA_noIP_2_2.fastq.gz	11	AX	yes	yes
-Hfq-FLAG-antiHfq_1	Hfq-FLAG-antiHfq	antiHfq	FLAG	IP		PE	../../demuxed-data/fastq231218/Hfq-FLAG-antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218/Hfq-FLAG-antiHfq_1_2.fastq.gz	19	AX	no	yes
-Hfq-FLAG-antiHfq_2	Hfq-FLAG-antiHfq	antiHfq	FLAG	IP		PE	../../demuxed-data/fastq231218/Hfq-FLAG-antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218/Hfq-FLAG-antiHfq_2_2.fastq.gz	25	AX	no	yes
-R16A_antiHfq_1	R16A_antiHfq	antiHfq	no	IP		PE	../../demuxed-data/fastq231218/R16A_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218/R16A_antiHfq_1_2.fastq.gz	18	AX	no	yes
-R16A_antiHfq_2	R16A_antiHfq	antiHfq	no	IP		PE	../../demuxed-data/fastq231218/R16A_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218/R16A_antiHfq_2_2.fastq.gz	24	AX	no	yes
-R16A_IPRNA_antiHfq_1	R16A_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA		PE	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_1_2.fastq.gz	6	AX	yes	no
-R16A_IPRNA_antiHfq_2	R16A_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA		PE	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_IPRNA_antiHfq_2_2.fastq.gz	14	AX	yes	no
-R16A_totalRNA_noIP_1	R16A_totalRNA_noIP	no IP	no	Total RNA		PE	../../demuxed-data/fastq231218_2/R16A_totalRNA_noIP_1_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_totalRNA_noIP_1_2.fastq.gz	2	AX	yes	yes
-R16A_totalRNA_noIP_2	R16A_totalRNA_noIP	no IP	no	Total RNA		PE	../../demuxed-data/fastq231218_2/R16A_totalRNA_noIP_2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A_totalRNA_noIP_2_2.fastq.gz	10	AX	yes	yes
-R16A-FLAG_antiHfq_1	R16A-FLAG_antiHfq	antiHfq	FLAG	IP		PE	../../demuxed-data/fastq231218/R16A-FLAG_antiHfq_1_1.fastq.gz	../../demuxed-data/fastq231218/R16A-FLAG_antiHfq_1_2.fastq.gz	20	AX	no	yes
-R16A-FLAG_antiHfq_2	R16A-FLAG_antiHfq	antiHfq	FLAG	IP		PE	../../demuxed-data/fastq231218/R16A-FLAG_antiHfq_2_1.fastq.gz	../../demuxed-data/fastq231218/R16A-FLAG_antiHfq_2_2.fastq.gz	26	AX	no	yes
-R16A-FLAG_IPRNA_antiHf2	R16A-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA		PE	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHf2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHf2_2.fastq.gz	16	AX	yes	no
-R16A-FLAG_IPRNA_antiHfq	R16A-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA		PE	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHfq_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_IPRNA_antiHfq_2.fastq.gz	8	AX	yes	no
-R16A-FLAG_totalRNA_noIP_1	R16A-FLAG_totalRNA_noIP	no IP	FLAG	Total RNA		PE	../../demuxed-data/fastq231218_2/R16A-FLAG_totalRNA_noIP_1_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_totalRNA_noIP_1_2.fastq.gz	4	AX	yes	yes
-R16A-FLAG_totalRNA_noIP_2	R16A-FLAG_totalRNA_noIP	no IP	FLAG	Total RNA		PE	../../demuxed-data/fastq231218_2/R16A-FLAG_totalRNA_noIP_2_1.fastq.gz	../../demuxed-data/fastq231218_2/R16A-FLAG_totalRNA_noIP_2_2.fastq.gz	12	AX	yes	yes
-Hfq_D9A-FLAG_1	Hfq_D9A-FLAG					PE	../../demuxed-data/fastq190510/Hfq_D9A-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_D9A-FLAG_1_2.fastq.gz	7	FMD	yes	no
-Hfq_D9A-FLAG_2	Hfq_D9A-FLAG					PE	../../demuxed-data/fastq190510/Hfq_D9A-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_D9A-FLAG_2_2.fastq.gz	8	FMD	yes	no
-Hfq_K31A-FLAG_1	Hfq_K31A-FLAG					PE	../../demuxed-data/fastq190510/Hfq_K31A-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_K31A-FLAG_1_2.fastq.gz	5	FMD	yes	no
-Hfq_K31A-FLAG_2	Hfq_K31A-FLAG					PE	../../demuxed-data/fastq190510/Hfq_K31A-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_K31A-FLAG_2_2.fastq.gz	6	FMD	yes	no
-Hfq_R16A-FLAG_1	Hfq_R16A-FLAG					PE	../../demuxed-data/fastq190510/Hfq_R16A-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_R16A-FLAG_1_2.fastq.gz	9	FMD	yes	no
-Hfq_R16A-FLAG_2	Hfq_R16A-FLAG					PE	../../demuxed-data/fastq190510/Hfq_R16A-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_R16A-FLAG_2_2.fastq.gz	10	FMD	yes	no
-Hfq_Y25D-FLAG_1	Hfq_Y25D-FLAG					PE	../../demuxed-data/fastq190510/Hfq_Y25D-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_Y25D-FLAG_1_2.fastq.gz	11	FMD	yes	no
-Hfq_Y25D-FLAG_2	Hfq_Y25D-FLAG					PE	../../demuxed-data/fastq190510/Hfq_Y25D-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq_Y25D-FLAG_2_2.fastq.gz	12	FMD	yes	no
-Hfq-FLAG_1	Hfq-FLAG					PE	../../demuxed-data/fastq190510/Hfq-FLAG_1_1.fastq.gz	../../demuxed-data/fastq190510/Hfq-FLAG_1_2.fastq.gz	3	FMD	yes	no
-Hfq-FLAG_2	Hfq-FLAG					PE	../../demuxed-data/fastq190510/Hfq-FLAG_2_1.fastq.gz	../../demuxed-data/fastq190510/Hfq-FLAG_2_2.fastq.gz	4	FMD	yes	no
-WT_Untagged_Hfq_1	WT_Untagged_Hfq					PE	../../demuxed-data/fastq190510/WT_Untagged_Hfq_1_1.fastq.gz	../../demuxed-data/fastq190510/WT_Untagged_Hfq_1_2.fastq.gz	1	FMD	yes	no
-WT_Untagged_Hfq_2	WT_Untagged_Hfq					PE	../../demuxed-data/fastq190510/WT_Untagged_Hfq_2_1.fastq.gz	../../demuxed-data/fastq190510/WT_Untagged_Hfq_2_2.fastq.gz	2	FMD	yes	no
-Hfq_ctrlplasmid_IP_1	Hfq_ctrlplasmid_IP	antiHfq	no	IP	pBAD24	PE	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_IP_1_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_IP_1_2.fastq.gz	13	GRIL	no	yes
-Hfq_ctrlplasmid_IP_2	Hfq_ctrlplasmid_IP	antiHfq	no	IP	pBAD24	PE	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_IP_2_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_IP_2_2.fastq.gz	17	GRIL	no	yes
-Hfq_ctrlplasmid_totalRNA_1	Hfq_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_totalRNA_1_2.fastq.gz	1	GRIL	yes	yes
-Hfq_ctrlplasmid_totalRNA_2	Hfq_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_ctrlplasmid_totalRNA_2_2.fastq.gz	7	GRIL	yes	yes
-Hfq_t4rnl1_IP_1	Hfq_t4rnl1_IP	antiHfq	no	IP	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/Hfq_t4rnl1_IP_1_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_t4rnl1_IP_1_2.fastq.gz	14	GRIL	no	yes
-Hfq_t4rnl1_IP_2	Hfq_t4rnl1_IP	antiHfq	no	IP	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/Hfq_t4rnl1_IP_2_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_t4rnl1_IP_2_2.fastq.gz	18	GRIL	no	yes
-Hfq_t4rnl1_totalRNA_1	Hfq_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/Hfq_t4rnl1_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_t4rnl1_totalRNA_1_2.fastq.gz	2	GRIL	yes	yes
-Hfq_t4rnl1_totalRNA_2	Hfq_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/Hfq_t4rnl1_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/Hfq_t4rnl1_totalRNA_2_2.fastq.gz	8	GRIL	yes	yes
-R16A_ctrlplasmid_IP_1	R16A_ctrlplasmid_IP	antiHfq	no	IP	pBAD24	PE	../../demuxed-data/fastq241218/R16A_ctrlplasmid_IP_1_1.fastq.gz	../../demuxed-data/fastq241218/R16A_ctrlplasmid_IP_1_2.fastq.gz	15	GRIL	no	yes
-R16A_ctrlplasmid_IP_2	R16A_ctrlplasmid_IP	antiHfq	no	IP	pBAD24	PE	../../demuxed-data/fastq241218/R16A_ctrlplasmid_IP_2_1.fastq.gz	../../demuxed-data/fastq241218/R16A_ctrlplasmid_IP_2_2.fastq.gz	19	GRIL	no	yes
-R16A_ctrlplasmid_totalRNA_1	R16A_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	../../demuxed-data/fastq241218/R16A_ctrlplasmid_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/R16A_ctrlplasmid_totalRNA_1_2.fastq.gz	3	GRIL	yes	yes
-R16A_ctrlplasmid_totalRNA_2	R16A_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	../../demuxed-data/fastq241218/R16A_ctrlplasmid_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/R16A_ctrlplasmid_totalRNA_2_2.fastq.gz	9	GRIL	yes	yes
-R16A_t4rnl1_IP_1	R16A_t4rnl1_IP	antiHfq	no	IP	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/R16A_t4rnl1_IP_1_1.fastq.gz	../../demuxed-data/fastq241218/R16A_t4rnl1_IP_1_2.fastq.gz	16	GRIL	no	yes
-R16A_t4rnl1_IP_2	R16A_t4rnl1_IP	antiHfq	no	IP	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/R16A_t4rnl1_IP_2_1.fastq.gz	../../demuxed-data/fastq241218/R16A_t4rnl1_IP_2_2.fastq.gz	20	GRIL	no	yes
-R16A_t4rnl1_totalRNA_1	R16A_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/R16A_t4rnl1_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/R16A_t4rnl1_totalRNA_1_2.fastq.gz	4	GRIL	yes	yes
-R16A_t4rnl1_totalRNA_2	R16A_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/R16A_t4rnl1_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/R16A_t4rnl1_totalRNA_2_2.fastq.gz	10	GRIL	yes	yes
-delHfq_ctrlplasmid_totalRNA_1	delHfq_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	../../demuxed-data/fastq241218/delHfq_ctrlplasmid_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/delHfq_ctrlplasmid_totalRNA_1_2.fastq.gz	5	GRIL	yes	yes
-delHfq_t4rnl1_totalRNA_1	delHfq_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/delHfq_t4rnl1_totalRNA_1_1.fastq.gz	../../demuxed-data/fastq241218/delHfq_t4rnl1_totalRNA_1_2.fastq.gz	6	GRIL	yes	yes
-delHfq_ctrlplasmid_totalRNA_2	delHfq_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	../../demuxed-data/fastq241218/delHfq_ctrlplasmid_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/delHfq_ctrlplasmid_totalRNA_2_2.fastq.gz	11	GRIL	yes	yes
-delHfq_t4rnl1_totalRNA_2	delHfq_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	../../demuxed-data/fastq241218/delHfq_t4rnl1_totalRNA_2_1.fastq.gz	../../demuxed-data/fastq241218/delHfq_t4rnl1_totalRNA_2_2.fastq.gz	12	GRIL	yes	yes
+samplename	group	antibody	FLAG	fraction	plasmid	layout	Run	original_samplenumber	batch	RNAseq_workflow	RIPseq_workflow
+Hfq_antiHfq_1	Hfq_antiHfq	antiHfq	no	IP		PE	SRR33510613	17	AX	no	yes
+Hfq_antiHfq_2	Hfq_antiHfq	antiHfq	no	IP		PE	SRR33510612	23	AX	no	yes
+Hfq_IPRNA_antiHfq_1	Hfq_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA		PE	SRR33511096	5	AX	yes	no
+Hfq_IPRNA_antiHfq_2	Hfq_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA		PE	SRR33511095	13	AX	yes	no
+Hfq_totalRNA_noIP_1	Hfq_totalRNA_noIP	no IP	no	Total RNA		PE	SRR33511098	1	AX	yes	yes
+Hfq_totalRNA_noIP_2	Hfq_totalRNA_noIP	no IP	no	Total RNA		PE	SRR33511101	9	AX	yes	yes
+Hfq-FLAG_IPRNA_antiHfq_1	Hfq-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA		PE	SRR33511094	7	AX	yes	no
+Hfq-FLAG_IPRNA_antiHfq_2	Hfq-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA		PE	SRR33511093	15	AX	yes	no
+Hfq-FLAG_totalRNA_noIP_1	Hfq-FLAG_totalRNA_noIP	no IP	FLAG	Total RNA		PE	SRR33511097	3	AX	yes	yes
+Hfq-FLAG_totalRNA_noIP_2	Hfq-FLAG_totalRNA_noIP	no IP	FLAG	Total RNA		PE	SRR33511102	11	AX	yes	yes
+Hfq-FLAG-antiHfq_1	Hfq-FLAG-antiHfq	antiHfq	FLAG	IP		PE	SRR33510609	19	AX	no	yes
+Hfq-FLAG-antiHfq_2	Hfq-FLAG-antiHfq	antiHfq	FLAG	IP		PE	SRR33510608	25	AX	no	yes
+R16A_antiHfq_1	R16A_antiHfq	antiHfq	no	IP		PE	SRR33510633	18	AX	no	yes
+R16A_antiHfq_2	R16A_antiHfq	antiHfq	no	IP		PE	SRR33510632	24	AX	no	yes
+R16A_IPRNA_antiHfq_1	R16A_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA		PE	SRR33511088	6	AX	yes	no
+R16A_IPRNA_antiHfq_2	R16A_IPRNA_antiHfq	anti-Hfq AB	no	IP RNA		PE	SRR33511087	14	AX	yes	no
+R16A_totalRNA_noIP_1	R16A_totalRNA_noIP	no IP	no	Total RNA		PE	SRR33511092	2	AX	yes	yes
+R16A_totalRNA_noIP_2	R16A_totalRNA_noIP	no IP	no	Total RNA		PE	SRR33511091	10	AX	yes	yes
+R16A-FLAG_antiHfq_1	R16A-FLAG_antiHfq	antiHfq	FLAG	IP		PE	SRR33510629	20	AX	no	yes
+R16A-FLAG_antiHfq_2	R16A-FLAG_antiHfq	antiHfq	FLAG	IP		PE	SRR33510628	26	AX	no	yes
+R16A-FLAG_IPRNA_antiHf2	R16A-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA		PE	SRR33511086	16	AX	yes	no
+R16A-FLAG_IPRNA_antiHfq	R16A-FLAG_IPRNA_antiHfq	anti-Hfq AB	yes	IP RNA		PE	SRR33511085	8	AX	yes	no
+R16A-FLAG_totalRNA_noIP_1	R16A-FLAG_totalRNA_noIP	no IP	FLAG	Total RNA		PE	SRR33511090	4	AX	yes	yes
+R16A-FLAG_totalRNA_noIP_2	R16A-FLAG_totalRNA_noIP	no IP	FLAG	Total RNA		PE	SRR33511089	12	AX	yes	yes
+Hfq_D9A-FLAG_1	Hfq_D9A-FLAG					PE	SRR33511108	7	FMD	yes	no
+Hfq_D9A-FLAG_2	Hfq_D9A-FLAG					PE	SRR33511105	8	FMD	yes	no
+Hfq_K31A-FLAG_1	Hfq_K31A-FLAG					PE	SRR33511109	5	FMD	yes	no
+Hfq_K31A-FLAG_2	Hfq_K31A-FLAG					PE	SRR33511104	6	FMD	yes	no
+Hfq_R16A-FLAG_1	Hfq_R16A-FLAG					PE	SRR33511110	9	FMD	yes	no
+Hfq_R16A-FLAG_2	Hfq_R16A-FLAG					PE	SRR33511103	10	FMD	yes	no
+Hfq_Y25D-FLAG_1	Hfq_Y25D-FLAG					PE	SRR33511099	11	FMD	yes	no
+Hfq_Y25D-FLAG_2	Hfq_Y25D-FLAG					PE	SRR33511100	12	FMD	yes	no
+Hfq-FLAG_1	Hfq-FLAG					PE	SRR33511107	3	FMD	yes	no
+Hfq-FLAG_2	Hfq-FLAG					PE	SRR33511106	4	FMD	yes	no
+WT_Untagged_Hfq_1	WT_Untagged_Hfq					PE	SRR33511112	1	FMD	yes	no
+WT_Untagged_Hfq_2	WT_Untagged_Hfq					PE	SRR33511111	2	FMD	yes	no
+Hfq_ctrlplasmid_IP_1	Hfq_ctrlplasmid_IP	antiHfq	no	IP	pBAD24	PE	SRR33506036	13	GRIL	no	yes
+Hfq_ctrlplasmid_IP_2	Hfq_ctrlplasmid_IP	antiHfq	no	IP	pBAD24	PE	SRR33506035	17	GRIL	no	yes
+Hfq_ctrlplasmid_totalRNA_1	Hfq_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	SRR33506032	1	GRIL	yes	yes
+Hfq_ctrlplasmid_totalRNA_2	Hfq_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	SRR33506031	7	GRIL	yes	yes
+Hfq_t4rnl1_IP_1	Hfq_t4rnl1_IP	antiHfq	no	IP	pBAD24-t4rnl1	PE	SRR33506033	14	GRIL	no	yes
+Hfq_t4rnl1_IP_2	Hfq_t4rnl1_IP	antiHfq	no	IP	pBAD24-t4rnl1	PE	SRR33506030	18	GRIL	no	yes
+Hfq_t4rnl1_totalRNA_1	Hfq_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	SRR33506034	2	GRIL	yes	yes
+Hfq_t4rnl1_totalRNA_2	Hfq_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	SRR33506029	8	GRIL	yes	yes
+R16A_ctrlplasmid_IP_1	R16A_ctrlplasmid_IP	antiHfq	no	IP	pBAD24	PE	SRR33506028	15	GRIL	no	yes
+R16A_ctrlplasmid_IP_2	R16A_ctrlplasmid_IP	antiHfq	no	IP	pBAD24	PE	SRR33506025	19	GRIL	no	yes
+R16A_ctrlplasmid_totalRNA_1	R16A_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	SRR33506024	3	GRIL	yes	yes
+R16A_ctrlplasmid_totalRNA_2	R16A_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	SRR33506026	9	GRIL	yes	yes
+R16A_t4rnl1_IP_1	R16A_t4rnl1_IP	antiHfq	no	IP	pBAD24-t4rnl1	PE	SRR33506023	16	GRIL	no	yes
+R16A_t4rnl1_IP_2	R16A_t4rnl1_IP	antiHfq	no	IP	pBAD24-t4rnl1	PE	SRR33506027	20	GRIL	no	yes
+R16A_t4rnl1_totalRNA_1	R16A_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	SRR33506022	4	GRIL	yes	yes
+R16A_t4rnl1_totalRNA_2	R16A_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	SRR33506021	10	GRIL	yes	yes
+delHfq_ctrlplasmid_totalRNA_1	delHfq_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	SRR33506019	5	GRIL	yes	yes
+delHfq_t4rnl1_totalRNA_1	delHfq_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	SRR33506020	6	GRIL	yes	yes
+delHfq_ctrlplasmid_totalRNA_2	delHfq_ctrlplasmid_totalRNA	no IP	no	Total RNA	pBAD24	PE	SRR33506018	11	GRIL	yes	yes
+delHfq_t4rnl1_totalRNA_2	delHfq_t4rnl1_totalRNA	no IP	no	Total RNA	pBAD24-t4rnl1	PE	SRR33506017	12	GRIL	yes	yes
