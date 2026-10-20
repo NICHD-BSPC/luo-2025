@@ -6,6 +6,7 @@ env-rilseq/
 # macOS files
 .DS_Store
 ._.DS_Store
+._*
 
 # workflows generic data and logs
 workflows/*/.snakemake/
