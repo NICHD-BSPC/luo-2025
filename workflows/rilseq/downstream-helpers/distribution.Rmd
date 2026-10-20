@@ -41,7 +41,7 @@ source('../downstream-helpers/helpers.R')
 subgroup_i <- params$subgroup
 spt <- read.csv('../config/sampletable.tsv', sep='\t')
 knitr::kable(spt %>%
-                select(-layout, -orig_filename, -orig_filename_R2)
+                select(-layout, -Run)
                 )
 samples <- spt %>%
     filter(fraction == 'IP', subgroup == subgroup_i) %>%

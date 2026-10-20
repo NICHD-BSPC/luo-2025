@@ -52,7 +52,7 @@ spt <- read.csv(params$sampletable, sep='\t')
 spt <- spt %>%
   filter(subgroup == subgroup_i)
 knitr::kable(spt %>%
-                select(-layout, -orig_filename, -orig_filename_R2)
+                select(-layout, -Run)
                 )
 ```
 
